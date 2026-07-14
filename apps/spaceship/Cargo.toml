@@ -1,0 +1,16 @@
+[package]
+name = "spaceship"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy.workspace = true
+spaceship-core.workspace = true
+spaceship-input.workspace = true
+spaceship-render.workspace = true
+spaceship-ui.workspace = true

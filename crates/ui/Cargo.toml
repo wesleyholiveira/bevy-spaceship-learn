@@ -1,0 +1,12 @@
+[package]
+name = "spaceship-ui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bevy.workspace = true
