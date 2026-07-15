@@ -1,3 +1,5 @@
+mod entity;
+
 use bevy::prelude::*;
 
 pub const SHIP_SPEED: f32 = 320.0;
