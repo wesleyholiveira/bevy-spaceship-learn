@@ -13,8 +13,8 @@ pub struct LinearPath {
 }
 
 impl PathPattern for LinearPath {
-    fn spawn_time(&self) -> f32 { self.spawn_time }
-    fn evaluate(&self, t: f32) -> Vec2 {
+    fn evaluate(&self, now: f32) -> Vec2 {
+        let t = now - self.spawn_time;
         self.origin + self.dir * self.speed * t
     }
 }

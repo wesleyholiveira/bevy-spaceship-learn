@@ -14,8 +14,8 @@ pub struct SineWavePath {
 }
 
 impl PathPattern for SineWavePath {
-    fn spawn_time(&self) -> f32 { self.spawn_time }
-    fn evaluate(&self, t: f32) -> Vec2 {
+    fn evaluate(&self, now: f32) -> Vec2 {
+        let t = now - self.spawn_time;
         let forward = self.dir * self.speed * t;
         let perp = Vec2::new(-self.dir.y, self.dir.x);
         let wave = perp * (t * self.frequency).sin() * self.amplitude;
@@ -23,7 +23,7 @@ impl PathPattern for SineWavePath {
     }
 }
 
-fn update_sine_wave(
+pub fn update_sine_wave(
     c: Commands,
     t: Res<Time>,
     q: Query<(Entity, &mut Transform, &SineWavePath, &mut Projectile)>,

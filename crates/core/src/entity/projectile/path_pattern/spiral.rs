@@ -13,8 +13,8 @@ pub struct SpiralPath {
 }
 
 impl PathPattern for SpiralPath {
-    fn spawn_time(&self) -> f32 { self.spawn_time }
-    fn evaluate(&self, t: f32) -> Vec2 {
+    fn evaluate(&self, now: f32) -> Vec2 {
+        let t = now - self.spawn_time;
         let angle = self.start_angle + self.angular_speed * t;
         let radius = self.radial_speed * t;
         self.origin + Vec2::from_angle(angle) * radius
