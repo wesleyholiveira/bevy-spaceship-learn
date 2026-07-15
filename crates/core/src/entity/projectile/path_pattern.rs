@@ -1,4 +1,6 @@
-mod linear;
+pub mod linear;
+pub mod spiral;
+pub mod sine_wave;
 
 use bevy::math::Vec2;
 use bevy::prelude::{Commands, Component, Entity, Query, Res, Transform};
@@ -10,7 +12,7 @@ pub trait PathPattern: Component {
     fn evaluate(&self, elapsed: f32) -> Vec2;
 }
 
-fn update_paths<P: PathPattern>(
+pub fn update_paths<P: PathPattern>(
     mut commands: Commands,
     time: Res<Time>,
     mut query: Query<(Entity, &mut Transform, &P, &mut Projectile)>,

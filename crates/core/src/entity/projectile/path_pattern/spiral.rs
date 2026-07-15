@@ -3,26 +3,28 @@ use bevy::prelude::{Commands, Component, Entity, Query, Res, Transform};
 use bevy::time::Time;
 use crate::entity::projectile::path_pattern::{update_paths, PathPattern};
 use crate::entity::projectile::Projectile;
-
 #[derive(Component)]
-pub struct LinearPath {
+pub struct SpiralPath {
     pub origin: Vec2,
-    pub dir: Vec2,
-    pub speed: f32,
+    pub start_angle: f32,
+    pub radial_speed: f32,
+    pub angular_speed: f32,
     pub spawn_time: f32,
 }
 
-impl PathPattern for LinearPath {
+impl PathPattern for SpiralPath {
     fn spawn_time(&self) -> f32 { self.spawn_time }
     fn evaluate(&self, t: f32) -> Vec2 {
-        self.origin + self.dir * self.speed * t
+        let angle = self.start_angle + self.angular_speed * t;
+        let radius = self.radial_speed * t;
+        self.origin + Vec2::from_angle(angle) * radius
     }
 }
-
-pub fn update_linear(
+pub fn update_spiral(
     c: Commands,
     t: Res<Time>,
-    q: Query<(Entity, &mut Transform, &LinearPath, &mut Projectile)>,
+    q: Query<(Entity, &mut Transform, &SpiralPath, &mut Projectile)>,
 ) {
-    update_paths::<LinearPath>(c, t, q);
+    update_paths::<SpiralPath>(c, t, q);
 }
+
