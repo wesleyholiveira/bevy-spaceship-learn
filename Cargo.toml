@@ -16,6 +16,7 @@ license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 bevy = { version = "0.19.0", default-features = false, features = ["2d", "ui"] }
+bevy_egui = "0.40.0"
 spaceship-core = { path = "crates/core" }
 spaceship-input = { path = "crates/input" }
 spaceship-render = { path = "crates/render" }
