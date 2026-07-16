@@ -1,4 +1,4 @@
-pub mod path_pattern;
+pub mod movement;
 
 use crate::{CullBoundary, GameConfig};
 

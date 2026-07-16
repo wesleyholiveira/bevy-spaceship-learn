@@ -1,4 +1,3 @@
-use crate::entity::projectile::path_pattern::linear::LinearPath;
 use crate::entity::projectile::{Active, Inactive, Projectile};
 
 use bevy::prelude::*;
@@ -29,7 +28,7 @@ pub fn player_emit(
 
         let origin = transform.translation.truncate();
         let dir = Vec2::Y;
-        let now = time.elapsed_secs();
+        let velocity = dir * 600.0;
 
         commands
             .entity(pool_entity)
@@ -37,12 +36,7 @@ pub fn player_emit(
             .insert(Active)
             .insert(Visibility::Inherited)
             .insert(Transform::from_translation(origin.extend(0.0)))
-            .insert(LinearPath {
-                origin,
-                dir,
-                speed: 600.0,
-                spawn_time: now,
-            })
+            .insert(crate::entity::projectile::movement::Movement::linear(velocity))
             .insert(Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(3.0, TimerMode::Once),
