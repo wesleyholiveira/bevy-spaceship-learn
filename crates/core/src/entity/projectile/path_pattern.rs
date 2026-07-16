@@ -1,11 +1,10 @@
 pub mod linear;
-pub mod spiral;
 pub mod sine_wave;
+pub mod spiral;
 
-use bevy::math::Vec2;
-use bevy::prelude::{Commands, Component, Entity, Query, Res, Transform};
-use bevy::time::Time;
 use crate::entity::projectile::Projectile;
+
+use bevy::prelude::*;
 
 pub trait PathPattern: Component {
     fn evaluate(&self, now: f32) -> Vec2;

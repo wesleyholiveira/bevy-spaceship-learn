@@ -1,4 +1,10 @@
-pub mod main;
 pub mod path_pattern;
 
-pub use main::Projectile;
+use bevy::prelude::*;
+use bevy::time::Timer;
+
+#[derive(Component)]
+pub struct Projectile {
+    pub damage: f32,
+    pub lifetime: Timer,
+}

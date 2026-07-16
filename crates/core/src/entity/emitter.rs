@@ -1,6 +1,7 @@
-use bevy::prelude::*;
 use crate::entity::projectile::Projectile;
 use crate::entity::projectile::path_pattern::linear::LinearPath;
+
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct Emitter {

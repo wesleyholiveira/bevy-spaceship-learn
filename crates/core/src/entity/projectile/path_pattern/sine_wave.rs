@@ -1,8 +1,8 @@
-use bevy::math::Vec2;
-use bevy::prelude::{Commands, Component, Entity, Query, Res, Transform};
-use bevy::time::Time;
-use crate::entity::projectile::path_pattern::{update_paths, PathPattern};
 use crate::entity::projectile::Projectile;
+use crate::entity::projectile::path_pattern::{PathPattern, update_paths};
+
+use bevy::prelude::*;
+
 #[derive(Component)]
 pub struct SineWavePath {
     pub origin: Vec2,
@@ -24,9 +24,9 @@ impl PathPattern for SineWavePath {
 }
 
 pub fn update_sine_wave(
-    c: Commands,
-    t: Res<Time>,
-    q: Query<(Entity, &mut Transform, &SineWavePath, &mut Projectile)>,
+    commands: Commands,
+    time: Res<Time>,
+    query: Query<(Entity, &mut Transform, &SineWavePath, &mut Projectile)>,
 ) {
-    update_paths::<SineWavePath>(c, t, q);
+    update_paths::<SineWavePath>(commands, time, query);
 }

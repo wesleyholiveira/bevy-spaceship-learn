@@ -1,8 +1,8 @@
-use bevy::math::Vec2;
-use bevy::prelude::{Commands, Component, Entity, Query, Res, Transform};
-use bevy::time::Time;
-use crate::entity::projectile::path_pattern::{update_paths, PathPattern};
 use crate::entity::projectile::Projectile;
+use crate::entity::projectile::path_pattern::{PathPattern, update_paths};
+
+use bevy::prelude::*;
+
 #[derive(Component)]
 pub struct SpiralPath {
     pub origin: Vec2,
@@ -20,11 +20,11 @@ impl PathPattern for SpiralPath {
         self.origin + Vec2::from_angle(angle) * radius
     }
 }
-pub fn update_spiral(
-    c: Commands,
-    t: Res<Time>,
-    q: Query<(Entity, &mut Transform, &SpiralPath, &mut Projectile)>,
-) {
-    update_paths::<SpiralPath>(c, t, q);
-}
 
+pub fn update_spiral(
+    commands: Commands,
+    time: Res<Time>,
+    query: Query<(Entity, &mut Transform, &SpiralPath, &mut Projectile)>,
+) {
+    update_paths::<SpiralPath>(commands, time, query);
+}

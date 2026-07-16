@@ -1,2 +1,2 @@
-pub mod projectile;
 pub mod emitter;
+pub mod projectile;
