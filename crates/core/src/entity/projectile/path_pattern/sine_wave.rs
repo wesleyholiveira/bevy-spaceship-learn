@@ -1,5 +1,5 @@
-use crate::entity::projectile::Projectile;
 use crate::entity::projectile::path_pattern::{PathPattern, update_paths};
+use crate::entity::projectile::{Active, Projectile};
 
 use bevy::prelude::*;
 
@@ -26,7 +26,7 @@ impl PathPattern for SineWavePath {
 pub fn update_sine_wave(
     commands: Commands,
     time: Res<Time>,
-    query: Query<(Entity, &mut Transform, &SineWavePath, &mut Projectile)>,
+    query: Query<(Entity, &mut Transform, &SineWavePath, &mut Projectile), With<Active>>,
 ) {
     update_paths::<SineWavePath>(commands, time, query);
 }

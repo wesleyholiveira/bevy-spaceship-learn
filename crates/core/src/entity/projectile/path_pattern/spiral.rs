@@ -1,5 +1,5 @@
-use crate::entity::projectile::Projectile;
 use crate::entity::projectile::path_pattern::{PathPattern, update_paths};
+use crate::entity::projectile::{Active, Projectile};
 
 use bevy::prelude::*;
 
@@ -24,7 +24,7 @@ impl PathPattern for SpiralPath {
 pub fn update_spiral(
     commands: Commands,
     time: Res<Time>,
-    query: Query<(Entity, &mut Transform, &SpiralPath, &mut Projectile)>,
+    query: Query<(Entity, &mut Transform, &SpiralPath, &mut Projectile), With<Active>>,
 ) {
     update_paths::<SpiralPath>(commands, time, query);
 }

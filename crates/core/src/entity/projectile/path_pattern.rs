@@ -2,7 +2,7 @@ pub mod linear;
 pub mod sine_wave;
 pub mod spiral;
 
-use crate::entity::projectile::Projectile;
+use crate::entity::projectile::{Active, Inactive, Projectile};
 
 use bevy::prelude::*;
 
@@ -13,16 +13,20 @@ pub trait PathPattern: Component {
 pub fn update_paths<P: PathPattern>(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut Transform, &P, &mut Projectile)>,
+    mut query: Query<(Entity, &mut Transform, &P, &mut Projectile), With<Active>>,
 ) {
     let now = time.elapsed_secs();
 
-    for (entity, mut transform, path, mut projectile) in query.iter_mut() {
+    for (entity, mut transform, path, mut projectile) in &mut query {
         transform.translation = path.evaluate(now).extend(0.0);
 
         projectile.lifetime.tick(time.delta());
         if projectile.lifetime.is_finished() {
-            commands.entity(entity).despawn();
+            commands
+                .entity(entity)
+                .remove::<Active>()
+                .insert(Inactive)
+                .insert(Visibility::Hidden);
         }
     }
 }
