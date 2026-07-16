@@ -1,13 +1,13 @@
 mod entity;
 
 use bevy::prelude::*;
-use entity::projectile::init_projectile_pool;
-use entity::projectile::path_pattern::sine_wave::update_sine_wave;
-use entity::projectile::path_pattern::spiral::update_spiral;
 
 pub use entity::emitter::{Emitter, PlayerEmitter, player_emit};
-pub use entity::projectile::path_pattern::linear::{LinearPath, update_linear};
-pub use entity::projectile::{Active, Inactive, Projectile, cull_projectiles};
+pub use entity::enemy::{Enemy, PatternEmitter, PatternState, PatternType, enemy_emit};
+pub use entity::projectile::movement::{Attraction, Movement, update_movement};
+pub use entity::projectile::{
+    Active, Inactive, Projectile, cull_projectiles, init_projectile_pool,
+};
 
 pub const DEFAULT_SHIP_SPEED: f32 = 320.0;
 pub const DEFAULT_MAX_BULLETS: usize = 256;
@@ -32,6 +32,9 @@ impl Default for GameConfig {
 
 #[derive(Component)]
 pub struct Ship;
+
+#[derive(Component)]
+pub struct PlayerTarget;
 
 #[derive(Resource, Default)]
 pub struct MovementIntent(pub Vec2);
@@ -80,9 +83,8 @@ impl Plugin for CorePlugin {
                 (
                     move_ship,
                     player_emit,
-                    update_linear,
-                    update_sine_wave,
-                    update_spiral,
+                    enemy_emit,
+                    update_movement,
                 )
                     .chain()
                     .in_set(GameplaySet::Simulation),

@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 #[allow(unused_imports)]
 use spaceship_core::{
-    Active, CullBoundary, Emitter, GameConfig, Inactive, LinearPath, MovementIntent, PlayerEmitter,
-    Projectile,
+    Active, CullBoundary, Emitter, Enemy, GameConfig, Inactive, Movement, MovementIntent,
+    PatternEmitter, PatternState, PatternType, PlayerEmitter, PlayerTarget, Projectile,
 };
-use spaceship_core::{cull_projectiles, player_emit, update_linear};
+use spaceship_core::{cull_projectiles, enemy_emit, player_emit};
 use std::time::Duration;
 
 #[allow(dead_code)]
@@ -16,12 +16,7 @@ fn spawn_active_projectile(world: &mut World, position: Vec3) -> Entity {
                 lifetime: Timer::from_seconds(1.0, TimerMode::Once),
             },
             Active,
-            LinearPath {
-                origin: position.truncate(),
-                dir: Vec2::Y,
-                speed: 600.0,
-                spawn_time: 0.0,
-            },
+            Movement::linear(Vec2::Y * 600.0),
             Transform::from_translation(position),
         ))
         .id()
@@ -89,7 +84,7 @@ fn finished_timer() -> Timer {
 fn sim_test_app() -> App {
     let mut app = App::new();
     app.add_plugins(bevy::time::TimePlugin)
-        .add_systems(Update, update_linear);
+        .add_systems(Update, spaceship_core::update_movement);
     app
 }
 
@@ -104,12 +99,7 @@ fn releases_projectile_when_lifetime_expires() {
                 damage: 1.0,
                 lifetime: finished_timer(),
             },
-            LinearPath {
-                origin: Vec2::ZERO,
-                dir: Vec2::Y,
-                speed: 600.0,
-                spawn_time: 0.0,
-            },
+            Movement::linear(Vec2::Y * 600.0),
             Transform::default(),
         ))
         .id();
@@ -160,12 +150,7 @@ fn acquire_reuses_inactive_entity() {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(3.0, TimerMode::Once),
             },
-            LinearPath {
-                origin: Vec2::new(10.0, 10.0),
-                dir: Vec2::Y,
-                speed: 600.0,
-                spawn_time: 0.0,
-            },
+            Movement::linear(Vec2::Y * 600.0),
             Transform::from_translation(Vec3::new(10.0, 10.0, 0.0)),
         ))
         .id();
@@ -234,6 +219,237 @@ fn keeps_diagonal_speed_normalized() {
     let ship_speed = GameConfig::default().ship_speed;
     let displacement = Vec2::ONE.normalize_or_zero() * ship_speed * 1.0;
     assert!((displacement.length() - ship_speed).abs() < 0.001);
+}
+
+#[allow(dead_code)]
+fn spinning_test_app() -> App {
+    let mut app = App::new();
+    app.init_resource::<GameConfig>()
+        .add_systems(Startup, spaceship_core::init_projectile_pool)
+        .add_systems(Update, enemy_emit);
+    app
+}
+
+#[test]
+fn spinning_pattern_releases_pairs() {
+    let mut app = spinning_test_app();
+
+    let player = app
+        .world_mut()
+        .spawn((PlayerTarget, Transform::from_xyz(0.0, -200.0, 0.0)))
+        .id();
+
+    let mut fire_rate = Timer::from_seconds(0.1, TimerMode::Repeating);
+    fire_rate.set_elapsed(Duration::from_micros(99_950));
+
+    let enemy = app
+        .world_mut()
+        .spawn((
+            Enemy,
+            PatternEmitter {
+                fire_rate,
+                pattern: PatternType::Spinning {
+                    pairs: 3,
+                    spacing: 0.1,
+                    angular_deviation: 0.1,
+                    pair_offset: 20.0,
+                    orbit_radius: 30.0,
+                    orbit_speed: 3.0,
+                },
+                state: PatternState::default(),
+            },
+            Transform::from_xyz(0.0, 200.0, 0.0),
+        ))
+        .id();
+
+    set_time_delta(&mut app, 0.001);
+    app.update();
+
+    let active_count = app
+        .world_mut()
+        .query_filtered::<Entity, With<Active>>()
+        .iter(app.world())
+        .count();
+
+    assert_eq!(active_count, 2, "Should release 2 bullets in first pair");
+
+    let _ = player;
+    let _ = enemy;
+}
+
+// Movement system tests (TDD - these will fail until we implement Movement)
+#[allow(dead_code)]
+fn movement_test_app() -> App {
+    let mut app = App::new();
+    app.add_systems(Update, spaceship_core::update_movement);
+    app
+}
+
+#[test]
+fn linear_movement_maintains_constant_velocity() {
+    let mut app = movement_test_app();
+    
+    let entity = app
+        .world_mut()
+        .spawn((
+            Active,
+            Movement::linear(Vec2::new(100.0, 0.0)),
+            Projectile {
+                damage: 1.0,
+                lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+            },
+            Transform::default(),
+        ))
+        .id();
+    
+    // Check if entity has Movement component
+    let has_movement = app.world().get::<Movement>(entity).is_some();
+    assert!(has_movement, "Entity should have Movement component");
+    
+    // Check if entity has Active component
+    let has_active = app.world().get::<Active>(entity).is_some();
+    assert!(has_active, "Entity should have Active component");
+    
+    let mut time: Time<()> = Time::default();
+    time.advance_by(Duration::from_secs_f32(1.0));
+    app.world_mut().insert_resource(time);
+    
+    app.update();
+    
+    let transform = app.world().get::<Transform>(entity).unwrap();
+    assert!((transform.translation.x - 100.0).abs() < 0.01);
+    assert!(transform.translation.y.abs() < 0.01);
+}
+
+#[test]
+fn accelerated_movement_changes_velocity_over_time() {
+    let mut app = movement_test_app();
+    
+    let entity = app
+        .world_mut()
+        .spawn((
+            Active,
+            Movement::accelerated(
+                Vec2::new(50.0, 0.0),
+                Vec2::new(10.0, 0.0),
+            ),
+            Projectile {
+                damage: 1.0,
+                lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+            },
+            Transform::default(),
+        ))
+        .id();
+    
+    let mut time: Time<()> = Time::default();
+    time.advance_by(Duration::from_secs_f32(1.0));
+    app.world_mut().insert_resource(time);
+    
+    app.update();
+    
+    let transform = app.world().get::<Transform>(entity).unwrap();
+    // With initial velocity 50 and acceleration 10, after 1 second:
+    // The movement system applies: velocity = acceleration + velocity * retention
+    // With retention = 1.0, velocity becomes 10 + 50 = 60
+    // Position = initial_velocity * dt = 50 * 1 = 50
+    // But the velocity is updated after position, so position should be 50
+    assert!(transform.translation.x >= 50.0);
+}
+
+#[test]
+fn asymptotic_movement_transitions_smoothly() {
+    let mut app = movement_test_app();
+    
+    let entity = app
+        .world_mut()
+        .spawn((
+            Active,
+            Movement::asymptotic(
+                Vec2::new(100.0, 0.0),  // initial velocity
+                Vec2::new(50.0, 0.0),   // target velocity
+                0.95,                    // retention
+            ),
+            Projectile {
+                damage: 1.0,
+                lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+            },
+            Transform::default(),
+        ))
+        .id();
+    
+    let mut time: Time<()> = Time::default();
+    time.advance_by(Duration::from_secs_f32(0.5));
+    app.world_mut().insert_resource(time);
+    
+    app.update();
+    
+    let transform = app.world().get::<Transform>(entity).unwrap();
+    // Should have moved, but velocity should be transitioning
+    assert!(transform.translation.x > 0.0);
+}
+
+#[test]
+fn attraction_movement_curves_toward_target() {
+    let mut app = movement_test_app();
+    
+    let entity = app
+        .world_mut()
+        .spawn((
+            Active,
+            Movement::towards(
+                Vec2::new(100.0, 0.0),  // initial velocity
+                Vec2::new(0.0, 100.0),  // target point
+                500.0,                    // attraction strength (increased)
+            ),
+            Projectile {
+                damage: 1.0,
+                lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+            },
+            Transform::default(),
+        ))
+        .id();
+    
+    let mut time: Time<()> = Time::default();
+    time.advance_by(Duration::from_secs_f32(0.5));
+    app.world_mut().insert_resource(time);
+    
+    app.update();
+    
+    let transform = app.world().get::<Transform>(entity).unwrap();
+    // Should have moved toward target (upward)
+    // With strong attraction, the bullet should curve upward
+    assert!(transform.translation.y > 0.0, "Bullet should have moved upward toward target");
+}
+
+#[test]
+fn movement_builder_creates_custom_combinations() {
+    let mut app = movement_test_app();
+    
+    let entity = app
+        .world_mut()
+        .spawn((
+            Active,
+            Movement::builder()
+                .velocity(Vec2::new(50.0, 0.0))
+                .acceleration(Vec2::new(5.0, 0.0))
+                .retention(0.98)
+                .build(),
+            Projectile {
+                damage: 1.0,
+                lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+            },
+            Transform::default(),
+        ))
+        .id();
+    
+    let mut time: Time<()> = Time::default();
+    time.advance_by(Duration::from_secs_f32(1.0));
+    app.world_mut().insert_resource(time);
+    
+    app.update();
+    
+    let transform = app.world().get::<Transform>(entity).unwrap();
+    assert!(transform.translation.x > 0.0);
 }
 
 fn main() {

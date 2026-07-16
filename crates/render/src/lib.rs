@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, Window};
-use spaceship_core::{CullBoundary, Emitter, PlayerEmitter, Projectile, Ship};
+use spaceship_core::{CullBoundary, Emitter, PlayerEmitter, PlayerTarget, Projectile, Ship};
 
 const SHIP_SIZE: Vec2 = Vec2::new(64.0, 64.0);
 const PROJECTILE_SIZE: Vec2 = Vec2::new(8.0, 16.0);
@@ -21,6 +21,7 @@ fn setup_scene(mut commands: Commands) {
     commands.spawn((
         Name::new("Ship"),
         Ship,
+        PlayerTarget,
         Emitter {
             fire_rate: Timer::from_seconds(0.2, TimerMode::Repeating),
         },
