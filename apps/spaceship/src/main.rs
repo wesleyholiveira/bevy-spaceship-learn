@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::WindowPlugin;
-use spaceship_core::{
-    CorePlugin, PatternEmitter, PatternState, PatternType, spawn_enemy,
-};
+use spaceship_core::{CorePlugin, PatternEmitter, PatternState, PatternType, spawn_enemy};
 use spaceship_input::InputPlugin;
 use spaceship_render::RenderPlugin;
 use spaceship_ui::UiPlugin;
@@ -23,7 +21,7 @@ fn main() {
         .run();
 }
 
-fn spawn_test_enemy(mut world: &mut World) {
+fn spawn_test_enemy(world: &mut World) {
     let pattern = PatternEmitter {
         fire_rate: Timer::from_seconds(0.1, TimerMode::Repeating),
         cooldown: {
@@ -42,10 +40,5 @@ fn spawn_test_enemy(mut world: &mut World) {
         state: PatternState::default(),
     };
 
-    spawn_enemy(
-        &mut world,
-        Vec2::new(0.0, 200.0),
-        pattern,
-        100.0,
-    );
+    spawn_enemy(world, Vec2::new(0.0, 200.0), pattern, 100.0);
 }

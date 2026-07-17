@@ -1,7 +1,7 @@
 use crate::GameConfig;
 use crate::entity::enemy::Enemy;
-use crate::entity::enemy::PatternEmitter;
 use crate::entity::enemy::Health;
+use crate::entity::enemy::PatternEmitter;
 use crate::entity::projectile::{Active, Inactive};
 
 use bevy::prelude::*;

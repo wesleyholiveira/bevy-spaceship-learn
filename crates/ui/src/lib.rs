@@ -83,7 +83,7 @@ fn fps_overlay_system(mut contexts: EguiContexts, counter: Res<FpsCounter>) {
         });
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 fn debug_overlay_system(
     mut contexts: EguiContexts,
     state: Res<OverlayState>,

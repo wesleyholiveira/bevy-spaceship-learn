@@ -59,6 +59,7 @@ impl Default for PatternType {
     }
 }
 
+#[allow(clippy::type_complexity, unused_variables)]
 pub fn enemy_emit(
     time: Res<Time>,
     mut commands: Commands,
