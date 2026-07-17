@@ -5,7 +5,7 @@ use crate::entity::projectile::{Active, Inactive, Projectile};
 
 use bevy::prelude::*;
 
-pub use pool::EnemyPool;
+pub use pool::{EnemyPool, EnemyPoolStats};
 
 #[derive(Component)]
 pub struct Enemy;
