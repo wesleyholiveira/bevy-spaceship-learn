@@ -1,10 +1,20 @@
+pub mod pool;
+
 use crate::PlayerTarget;
 use crate::entity::projectile::{Active, Inactive, Projectile};
 
 use bevy::prelude::*;
 
+pub use pool::EnemyPool;
+
 #[derive(Component)]
 pub struct Enemy;
+
+#[derive(Component, Clone, Copy)]
+pub struct Health {
+    pub current: f32,
+    pub max: f32,
+}
 
 #[derive(Component)]
 pub struct PatternEmitter {
@@ -98,7 +108,9 @@ pub fn enemy_emit(
                         .insert(Active)
                         .insert(Visibility::Inherited)
                         .insert(Transform::from_translation(origin.extend(0.0)))
-                        .insert(crate::entity::projectile::movement::Movement::linear(velocity))
+                        .insert(crate::entity::projectile::movement::Movement::linear(
+                            velocity,
+                        ))
                         .insert(Projectile {
                             damage: 1.0,
                             lifetime: Timer::from_seconds(5.0, TimerMode::Once),
@@ -134,7 +146,8 @@ pub fn enemy_emit(
                     let spawn_pos = origin + offset;
 
                     // Calculate initial velocity based on bullet angle
-                    let initial_velocity = Vec2::new(bullet_angle.cos(), bullet_angle.sin()) * 400.0;
+                    let initial_velocity =
+                        Vec2::new(bullet_angle.cos(), bullet_angle.sin()) * 400.0;
                     // Target velocity orbits around the player
                     let target_velocity = Vec2::new(
                         (bullet_angle + std::f32::consts::FRAC_PI_2).cos(),

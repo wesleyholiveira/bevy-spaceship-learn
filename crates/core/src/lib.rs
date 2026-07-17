@@ -3,7 +3,7 @@ mod entity;
 use bevy::prelude::*;
 
 pub use entity::emitter::{Emitter, PlayerEmitter, player_emit};
-pub use entity::enemy::{Enemy, PatternEmitter, PatternState, PatternType, enemy_emit};
+pub use entity::enemy::{Enemy, EnemyPool, PatternEmitter, PatternState, PatternType, enemy_emit};
 pub use entity::projectile::movement::{Attraction, Movement, update_movement};
 pub use entity::projectile::{
     Active, Inactive, Projectile, cull_projectiles, init_projectile_pool,
@@ -12,12 +12,14 @@ pub use entity::projectile::{
 pub const DEFAULT_SHIP_SPEED: f32 = 320.0;
 pub const DEFAULT_MAX_BULLETS: usize = 256;
 pub const DEFAULT_CULL_MARGIN: f32 = 100.0;
+pub const DEFAULT_MAX_ENEMIES: usize = 64;
 
 #[derive(Resource, Clone, Copy)]
 pub struct GameConfig {
     pub ship_speed: f32,
     pub max_bullets: usize,
     pub cull_margin: f32,
+    pub max_enemies: usize,
 }
 
 impl Default for GameConfig {
@@ -26,6 +28,7 @@ impl Default for GameConfig {
             ship_speed: DEFAULT_SHIP_SPEED,
             max_bullets: DEFAULT_MAX_BULLETS,
             cull_margin: DEFAULT_CULL_MARGIN,
+            max_enemies: DEFAULT_MAX_ENEMIES,
         }
     }
 }
@@ -80,12 +83,7 @@ impl Plugin for CorePlugin {
             )
             .add_systems(
                 Update,
-                (
-                    move_ship,
-                    player_emit,
-                    enemy_emit,
-                    update_movement,
-                )
+                (move_ship, player_emit, enemy_emit, update_movement)
                     .chain()
                     .in_set(GameplaySet::Simulation),
             )
