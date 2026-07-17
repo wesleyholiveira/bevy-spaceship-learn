@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::WindowPlugin;
-use spaceship_core::{CorePlugin, PatternEmitter, PatternState, PatternType, spawn_enemy};
+use spaceship_core::{CorePlugin, PatternEmitter, PatternState, PatternType, init_enemy_pool, spawn_enemy};
 use spaceship_input::InputPlugin;
 use spaceship_render::RenderPlugin;
 use spaceship_ui::UiPlugin;
@@ -17,7 +17,7 @@ fn main() {
             ..default()
         }))
         .add_plugins((CorePlugin, InputPlugin, RenderPlugin, UiPlugin))
-        .add_systems(Startup, spawn_test_enemy)
+        .add_systems(Startup, spawn_test_enemy.after(init_enemy_pool))
         .run();
 }
 
