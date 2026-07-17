@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPlugin, egui};
-use spaceship_core::{Active, GameConfig, Inactive, Projectile};
+use spaceship_core::{Active, EnemyPool, EnemyPoolStats, GameConfig, Inactive, Projectile};
 
 #[derive(Resource)]
 struct FpsCounter {
@@ -91,6 +91,8 @@ fn debug_overlay_system(
     active_query: Query<Entity, With<Active>>,
     inactive_query: Query<Entity, With<Inactive>>,
     projectile_query: Query<(Entity, &Transform), (With<Active>, With<Projectile>)>,
+    pool: Res<EnemyPool>,
+    pool_stats: Res<EnemyPoolStats>,
 ) {
     if !state.visible {
         return;
@@ -139,6 +141,13 @@ fn debug_overlay_system(
             ui.label(format!("Active: {}", active_count));
             ui.label(format!("Inactive: {}", inactive_count));
             ui.label(format!("Total: {}", active_count + inactive_count));
+
+            ui.add_space(10.0);
+            ui.heading("Enemy Pool");
+            ui.separator();
+            ui.label(format!("Available: {}", pool.available_count()));
+            ui.label(format!("Failed spawns: {}", pool_stats.failed_spawns));
+            ui.label(format!("Total releases: {}", pool_stats.total_releases));
 
             ui.add_space(10.0);
             ui.heading("Active Projectiles");

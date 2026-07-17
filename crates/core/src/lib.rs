@@ -75,7 +75,10 @@ impl Plugin for CorePlugin {
         app.init_resource::<MovementIntent>()
             .init_resource::<CullBoundary>()
             .init_resource::<GameConfig>()
+            .init_resource::<crate::entity::enemy::pool::EnemyPool>()
+            .init_resource::<crate::entity::enemy::pool::EnemyPoolStats>()
             .add_systems(Startup, init_projectile_pool)
+            .add_systems(Startup, crate::entity::enemy::pool::init_enemy_pool)
             .configure_sets(
                 Update,
                 (
@@ -87,11 +90,20 @@ impl Plugin for CorePlugin {
             )
             .add_systems(
                 Update,
-                (move_ship, player_emit, enemy_emit, update_movement)
+                (
+                    move_ship,
+                    player_emit,
+                    enemy_emit,
+                    update_movement,
+                    release_dead_enemies,
+                )
                     .chain()
                     .in_set(GameplaySet::Simulation),
             )
-            .add_systems(Update, cull_projectiles.in_set(GameplaySet::Presentation));
+            .add_systems(
+                Update,
+                (cull_projectiles, cull_enemies).in_set(GameplaySet::Presentation),
+            );
     }
 }
 
