@@ -1,5 +1,5 @@
 [package]
-name = "spaceship-ui"
+name = "tests"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,5 +10,4 @@ workspace = true
 
 [dependencies]
 bevy.workspace = true
-bevy_egui.workspace = true
 spaceship-core.workspace = true

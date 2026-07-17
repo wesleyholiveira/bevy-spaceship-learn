@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "apps/spaceship",
+    "apps/tests",
     "crates/core",
     "crates/input",
     "crates/render",

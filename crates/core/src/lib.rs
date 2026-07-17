@@ -1,24 +1,58 @@
+mod entity;
+
 use bevy::prelude::*;
 
-pub const SHIP_SPEED: f32 = 320.0;
+pub use entity::emitter::{Emitter, PlayerEmitter, player_emit};
+pub use entity::enemy::{Enemy, PatternEmitter, PatternState, PatternType, enemy_emit};
+pub use entity::projectile::movement::{Attraction, Movement, update_movement};
+pub use entity::projectile::{
+    Active, Inactive, Projectile, cull_projectiles, init_projectile_pool,
+};
+
+pub const DEFAULT_SHIP_SPEED: f32 = 320.0;
+pub const DEFAULT_MAX_BULLETS: usize = 256;
+pub const DEFAULT_CULL_MARGIN: f32 = 100.0;
+
+#[derive(Resource, Clone, Copy)]
+pub struct GameConfig {
+    pub ship_speed: f32,
+    pub max_bullets: usize,
+    pub cull_margin: f32,
+}
+
+impl Default for GameConfig {
+    fn default() -> Self {
+        Self {
+            ship_speed: DEFAULT_SHIP_SPEED,
+            max_bullets: DEFAULT_MAX_BULLETS,
+            cull_margin: DEFAULT_CULL_MARGIN,
+        }
+    }
+}
 
 #[derive(Component)]
 pub struct Ship;
 
-#[derive(Component, Default)]
-pub struct Position(pub Vec2);
-
 #[derive(Component)]
-pub struct MovementSpeed(pub f32);
-
-impl Default for MovementSpeed {
-    fn default() -> Self {
-        Self(SHIP_SPEED)
-    }
-}
+pub struct PlayerTarget;
 
 #[derive(Resource, Default)]
 pub struct MovementIntent(pub Vec2);
+
+#[derive(Resource, Clone, Copy)]
+pub struct CullBoundary {
+    pub half_width: f32,
+    pub half_height: f32,
+}
+
+impl Default for CullBoundary {
+    fn default() -> Self {
+        Self {
+            half_width: 640.0,
+            half_height: 360.0,
+        }
+    }
+}
 
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GameplaySet {
@@ -32,6 +66,9 @@ pub struct CorePlugin;
 impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MovementIntent>()
+            .init_resource::<CullBoundary>()
+            .init_resource::<GameConfig>()
+            .add_systems(Startup, init_projectile_pool)
             .configure_sets(
                 Update,
                 (
@@ -41,40 +78,30 @@ impl Plugin for CorePlugin {
                 )
                     .chain(),
             )
-            .add_systems(Update, move_ship.in_set(GameplaySet::Simulation));
+            .add_systems(
+                Update,
+                (
+                    move_ship,
+                    player_emit,
+                    enemy_emit,
+                    update_movement,
+                )
+                    .chain()
+                    .in_set(GameplaySet::Simulation),
+            )
+            .add_systems(Update, cull_projectiles.in_set(GameplaySet::Presentation));
     }
 }
 
 fn move_ship(
     time: Res<Time>,
     movement_intent: Res<MovementIntent>,
-    mut ships: Query<(&MovementSpeed, &mut Position), With<Ship>>,
+    config: Res<GameConfig>,
+    mut ships: Query<&mut Transform, With<Ship>>,
 ) {
-    for (speed, mut position) in &mut ships {
-        position.0 +=
-            movement_displacement(movement_intent.0, speed.0, time.delta_secs());
-    }
-}
-
-fn movement_displacement(intent: Vec2, speed: f32, delta_seconds: f32) -> Vec2 {
-    intent.normalize_or_zero() * speed * delta_seconds
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn does_not_move_without_input() {
-        let displacement = movement_displacement(Vec2::ZERO, SHIP_SPEED, 1.0);
-
-        assert_eq!(displacement, Vec2::ZERO);
-    }
-
-    #[test]
-    fn keeps_diagonal_speed_normalized() {
-        let displacement = movement_displacement(Vec2::ONE, SHIP_SPEED, 1.0);
-
-        assert!((displacement.length() - SHIP_SPEED).abs() < 0.001);
+    for mut transform in &mut ships {
+        let displacement =
+            movement_intent.0.normalize_or_zero() * config.ship_speed * time.delta_secs();
+        transform.translation += displacement.extend(0.0);
     }
 }
