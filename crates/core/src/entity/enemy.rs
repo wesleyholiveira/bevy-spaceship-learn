@@ -62,8 +62,8 @@ impl Default for PatternType {
 pub fn enemy_emit(
     time: Res<Time>,
     mut commands: Commands,
-    mut emitters: Query<(Entity, &Transform, &mut PatternEmitter), With<Enemy>>,
-    inactive: Query<Entity, With<Inactive>>,
+    mut emitters: Query<(Entity, &Transform, &mut PatternEmitter), (With<Active>, With<Enemy>)>,
+    inactive: Query<Entity, (With<Inactive>, With<Projectile>)>,
     player: Query<&Transform, With<PlayerTarget>>,
 ) {
     let player_pos = player

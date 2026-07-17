@@ -144,7 +144,17 @@ fn spawn_about_to_fire_emitter(world: &mut World, position: Vec3) -> Entity {
 #[test]
 fn acquire_reuses_inactive_entity() {
     let mut app = emitter_app();
-    let inactive = app.world_mut().spawn((Inactive, Transform::default())).id();
+    let inactive = app
+        .world_mut()
+        .spawn((
+            Inactive,
+            Projectile {
+                damage: 0.0,
+                lifetime: Timer::from_seconds(1.0, TimerMode::Once),
+            },
+            Transform::default(),
+        ))
+        .id();
     let active = app
         .world_mut()
         .spawn((
@@ -249,6 +259,7 @@ fn spinning_pattern_releases_pairs() {
         .world_mut()
         .spawn((
             Enemy,
+            Active,
             PatternEmitter {
                 fire_rate,
                 cooldown: {
@@ -275,7 +286,7 @@ fn spinning_pattern_releases_pairs() {
 
     let active_count = app
         .world_mut()
-        .query_filtered::<Entity, With<Active>>()
+        .query_filtered::<Entity, (With<Active>, With<Projectile>)>()
         .iter(app.world())
         .count();
 
