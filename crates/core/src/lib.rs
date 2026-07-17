@@ -3,8 +3,11 @@ mod entity;
 use bevy::prelude::*;
 
 pub use entity::emitter::{Emitter, PlayerEmitter, player_emit};
-pub use entity::enemy::{Enemy, EnemyPool, EnemyPoolStats, Health, PatternEmitter, PatternState, PatternType, enemy_emit};
 pub use entity::enemy::pool::{init_enemy_pool, release_enemy, spawn_enemy};
+pub use entity::enemy::{
+    Enemy, EnemyPool, EnemyPoolStats, Health, PatternEmitter, PatternState, PatternType,
+    cull_enemies, enemy_emit, release_dead_enemies,
+};
 pub use entity::projectile::movement::{Attraction, Movement, update_movement};
 pub use entity::projectile::{
     Active, Inactive, Projectile, cull_projectiles, init_projectile_pool,

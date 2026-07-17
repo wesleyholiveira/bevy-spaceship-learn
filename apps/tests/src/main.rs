@@ -5,7 +5,9 @@ use spaceship_core::{
     Movement, MovementIntent, PatternEmitter, PatternState, PatternType, PlayerEmitter,
     PlayerTarget, Projectile,
 };
-use spaceship_core::{cull_projectiles, enemy_emit, player_emit};
+use spaceship_core::{
+    cull_enemies, cull_projectiles, enemy_emit, player_emit, release_dead_enemies,
+};
 use std::time::Duration;
 
 #[allow(dead_code)]
@@ -466,7 +468,11 @@ fn enemy_pool_acquire_is_atomic() {
 
     let acquired = pool.acquire();
     assert_eq!(acquired, Some(entity));
-    assert_eq!(pool.acquire(), None, "second acquire must not return the same entity");
+    assert_eq!(
+        pool.acquire(),
+        None,
+        "second acquire must not return the same entity"
+    );
 }
 
 #[test]
@@ -599,13 +605,8 @@ fn spawn_enemy_initializes_visibility_inherited() {
     let mut app = spawn_enemy_test_app();
     app.update();
 
-    let entity = spaceship_core::spawn_enemy(
-        app.world_mut(),
-        Vec2::ZERO,
-        test_pattern(),
-        50.0,
-    )
-    .expect("pool is non-empty");
+    let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 50.0)
+        .expect("pool is non-empty");
 
     let world = app.world();
     assert_eq!(
@@ -621,12 +622,7 @@ fn spawn_enemy_when_pool_empty_records_failure() {
         .init_resource::<EnemyPool>()
         .init_resource::<EnemyPoolStats>();
 
-    let result = spaceship_core::spawn_enemy(
-        app.world_mut(),
-        Vec2::ZERO,
-        test_pattern(),
-        50.0,
-    );
+    let result = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 50.0);
 
     assert!(result.is_none());
     let stats = app.world().resource::<EnemyPoolStats>();
@@ -638,13 +634,9 @@ fn release_enemy_makes_entity_inactive_and_returns_to_pool() {
     let mut app = spawn_enemy_test_app();
     app.update();
 
-    let entity = spaceship_core::spawn_enemy(
-        app.world_mut(),
-        Vec2::new(5.0, 5.0),
-        test_pattern(),
-        50.0,
-    )
-    .expect("pool is non-empty");
+    let entity =
+        spaceship_core::spawn_enemy(app.world_mut(), Vec2::new(5.0, 5.0), test_pattern(), 50.0)
+            .expect("pool is non-empty");
 
     assert_eq!(
         app.world().resource::<EnemyPool>().available_count(),
@@ -656,7 +648,10 @@ fn release_enemy_makes_entity_inactive_and_returns_to_pool() {
     let world = app.world();
     assert!(world.get::<Active>(entity).is_none());
     assert!(world.get::<Inactive>(entity).is_some());
-    assert_eq!(*world.get::<Visibility>(entity).unwrap(), Visibility::Hidden);
+    assert_eq!(
+        *world.get::<Visibility>(entity).unwrap(),
+        Visibility::Hidden
+    );
     assert_eq!(
         world.get::<Transform>(entity).unwrap().translation,
         Vec3::ZERO
@@ -673,13 +668,8 @@ fn release_enemy_clears_pattern_and_health_state() {
     let mut app = spawn_enemy_test_app();
     app.update();
 
-    let entity = spaceship_core::spawn_enemy(
-        app.world_mut(),
-        Vec2::ZERO,
-        test_pattern(),
-        100.0,
-    )
-    .expect("pool is non-empty");
+    let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 100.0)
+        .expect("pool is non-empty");
 
     assert!(app.world().get::<PatternEmitter>(entity).is_some());
     assert!(app.world().get::<Health>(entity).is_some());
@@ -702,13 +692,9 @@ fn enemy_can_be_activated_released_and_activated_again_with_new_state() {
     let mut app = spawn_enemy_test_app();
     app.update();
 
-    let entity = spaceship_core::spawn_enemy(
-        app.world_mut(),
-        Vec2::new(1.0, 2.0),
-        test_pattern(),
-        30.0,
-    )
-    .expect("pool is non-empty");
+    let entity =
+        spaceship_core::spawn_enemy(app.world_mut(), Vec2::new(1.0, 2.0), test_pattern(), 30.0)
+            .expect("pool is non-empty");
 
     spaceship_core::release_enemy(app.world_mut(), entity);
 
@@ -761,30 +747,143 @@ fn simultaneous_spawns_acquire_distinct_entities() {
 
     let mut acquired = Vec::new();
     for _ in 0..GameConfig::default().max_enemies {
-        let entity = spaceship_core::spawn_enemy(
-            app.world_mut(),
-            Vec2::ZERO,
-            test_pattern(),
-            10.0,
-        )
-        .expect("pool should still have entities");
+        let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 10.0)
+            .expect("pool should still have entities");
         acquired.push(entity);
     }
 
     let unique: std::collections::HashSet<_> = acquired.iter().map(|e| e.index()).collect();
-    assert_eq!(unique.len(), acquired.len(), "no entity may be acquired twice");
-
-    let fourth = spaceship_core::spawn_enemy(
-        app.world_mut(),
-        Vec2::ZERO,
-        test_pattern(),
-        10.0,
+    assert_eq!(
+        unique.len(),
+        acquired.len(),
+        "no entity may be acquired twice"
     );
+
+    let fourth = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 10.0);
     assert!(fourth.is_none(), "exhausted pool returns None");
     assert_eq!(
         app.world().resource::<EnemyPoolStats>().failed_spawns,
         1,
         "exhausted pool increments failed_spawns exactly once"
+    );
+}
+
+#[allow(dead_code)]
+fn enemy_cull_test_app(boundary: CullBoundary) -> App {
+    let mut app = App::new();
+    app.init_resource::<GameConfig>()
+        .init_resource::<EnemyPool>()
+        .init_resource::<EnemyPoolStats>()
+        .insert_resource(boundary)
+        .add_systems(Startup, spaceship_core::init_enemy_pool)
+        .add_systems(Update, cull_enemies);
+    app
+}
+
+#[test]
+fn cull_enemies_releases_enemy_outside_boundary() {
+    let mut app = enemy_cull_test_app(CullBoundary {
+        half_width: 100.0,
+        half_height: 100.0,
+    });
+
+    app.update(); // run Startup to initialize the pool
+
+    let entity = spaceship_core::spawn_enemy(
+        app.world_mut(),
+        Vec2::new(1_000.0, 0.0),
+        test_pattern(),
+        100.0,
+    )
+    .expect("pool is non-empty");
+
+    app.update();
+
+    let world = app.world();
+    assert!(world.get::<Active>(entity).is_none());
+    assert!(world.get::<Inactive>(entity).is_some());
+    assert_eq!(
+        world.resource::<EnemyPool>().available_count(),
+        GameConfig::default().max_enemies
+    );
+    assert_eq!(world.resource::<EnemyPoolStats>().total_releases, 1);
+}
+
+#[test]
+fn cull_enemies_keeps_enemy_inside_boundary() {
+    let mut app = enemy_cull_test_app(CullBoundary {
+        half_width: 100.0,
+        half_height: 100.0,
+    });
+
+    app.update(); // run Startup to initialize the pool
+
+    let entity = spaceship_core::spawn_enemy(
+        app.world_mut(),
+        Vec2::new(50.0, 50.0),
+        test_pattern(),
+        100.0,
+    )
+    .expect("pool is non-empty");
+
+    app.update();
+
+    let world = app.world();
+    assert!(world.get::<Active>(entity).is_some());
+    assert_eq!(
+        world.resource::<EnemyPool>().available_count(),
+        GameConfig::default().max_enemies - 1
+    );
+}
+
+#[allow(dead_code)]
+fn dead_enemy_test_app() -> App {
+    let mut app = App::new();
+    app.init_resource::<GameConfig>()
+        .init_resource::<EnemyPool>()
+        .init_resource::<EnemyPoolStats>()
+        .add_systems(Startup, spaceship_core::init_enemy_pool)
+        .add_systems(Update, release_dead_enemies);
+    app
+}
+
+#[test]
+fn release_dead_enemies_returns_zero_hp_to_pool() {
+    let mut app = dead_enemy_test_app();
+
+    app.update(); // run Startup to initialize the pool
+
+    let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 0.0)
+        .expect("pool is non-empty");
+
+    app.update();
+
+    let world = app.world();
+    assert!(world.get::<Active>(entity).is_none());
+    assert!(world.get::<Inactive>(entity).is_some());
+    assert!(world.get::<Health>(entity).is_none());
+    assert_eq!(
+        world.resource::<EnemyPool>().available_count(),
+        GameConfig::default().max_enemies
+    );
+}
+
+#[test]
+fn release_dead_enemies_keeps_alive_enemies() {
+    let mut app = dead_enemy_test_app();
+
+    app.update(); // run Startup to initialize the pool
+
+    let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 50.0)
+        .expect("pool is non-empty");
+
+    app.update();
+
+    let world = app.world();
+    assert!(world.get::<Active>(entity).is_some());
+    assert_eq!(
+        world.resource::<EnemyPool>().available_count(),
+        GameConfig::default().max_enemies - 1
     );
 }
 

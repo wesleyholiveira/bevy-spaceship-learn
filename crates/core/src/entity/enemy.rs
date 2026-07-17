@@ -1,4 +1,6 @@
+pub mod lifecycle;
 pub mod pool;
+pub use lifecycle::{cull_enemies, release_dead_enemies};
 
 use crate::PlayerTarget;
 use crate::entity::projectile::{Active, Inactive, Projectile};
