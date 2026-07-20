@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPlugin, egui};
-use spaceship_core::{Active, GameConfig, Inactive, Projectile};
+use spaceship_core::enemy::{EnemyPool, EnemyPoolStats};
+use spaceship_core::projectile::{Active, Inactive, Projectile};
+use spaceship_core::GameConfig;
 
 #[derive(Resource)]
 struct FpsCounter {
@@ -83,7 +85,7 @@ fn fps_overlay_system(mut contexts: EguiContexts, counter: Res<FpsCounter>) {
         });
 }
 
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 fn debug_overlay_system(
     mut contexts: EguiContexts,
     state: Res<OverlayState>,
@@ -91,6 +93,8 @@ fn debug_overlay_system(
     active_query: Query<Entity, With<Active>>,
     inactive_query: Query<Entity, With<Inactive>>,
     projectile_query: Query<(Entity, &Transform), (With<Active>, With<Projectile>)>,
+    pool: Res<EnemyPool>,
+    pool_stats: Res<EnemyPoolStats>,
 ) {
     if !state.visible {
         return;
@@ -139,6 +143,13 @@ fn debug_overlay_system(
             ui.label(format!("Active: {}", active_count));
             ui.label(format!("Inactive: {}", inactive_count));
             ui.label(format!("Total: {}", active_count + inactive_count));
+
+            ui.add_space(10.0);
+            ui.heading("Enemy Pool");
+            ui.separator();
+            ui.label(format!("Available: {}", pool.available_count()));
+            ui.label(format!("Failed spawns: {}", pool_stats.failed_spawns));
+            ui.label(format!("Total releases: {}", pool_stats.total_releases));
 
             ui.add_space(10.0);
             ui.heading("Active Projectiles");

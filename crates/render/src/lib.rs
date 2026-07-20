@@ -1,10 +1,15 @@
 use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, Window};
-use spaceship_core::{CullBoundary, Emitter, PlayerEmitter, PlayerTarget, Projectile, Ship};
+use spaceship_core::emitter::{Emitter, PlayerEmitter};
+use spaceship_core::enemy::Enemy;
+use spaceship_core::projectile::Projectile;
+use spaceship_core::{CullBoundary, PlayerTarget, Ship};
 
 const SHIP_SIZE: Vec2 = Vec2::new(64.0, 64.0);
+const ENEMY_SIZE: Vec2 = Vec2::new(64.0, 64.0);
 const PROJECTILE_SIZE: Vec2 = Vec2::new(8.0, 16.0);
 const PROJECTILE_COLOR: Color = Color::srgb(1.0, 0.8, 0.2);
+const ENEMY_COLOR: Color = Color::srgb(1.0, 0.2, 0.2);
 
 pub struct RenderPlugin;
 
@@ -12,7 +17,7 @@ impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::srgb(0.015, 0.02, 0.04)))
             .add_systems(Startup, setup_scene)
-            .add_systems(Update, (sync_cull_boundary, ensure_projectile_sprite));
+            .add_systems(Update, (sync_cull_boundary, ensure_projectile_sprite, ensure_enemy_sprite));
     }
 }
 
@@ -39,6 +44,17 @@ fn ensure_projectile_sprite(
         commands
             .entity(entity)
             .insert(Sprite::from_color(PROJECTILE_COLOR, PROJECTILE_SIZE));
+    }
+}
+
+fn ensure_enemy_sprite(
+    mut commands: Commands,
+    enemies: Query<Entity, (With<Enemy>, Without<Sprite>)>,
+) {
+    for entity in &enemies {
+        commands
+            .entity(entity)
+            .insert(Sprite::from_color(ENEMY_COLOR, ENEMY_SIZE));
     }
 }
 

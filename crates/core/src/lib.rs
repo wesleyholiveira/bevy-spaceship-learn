@@ -2,22 +2,21 @@ mod entity;
 
 use bevy::prelude::*;
 
-pub use entity::emitter::{Emitter, PlayerEmitter, player_emit};
-pub use entity::enemy::{Enemy, PatternEmitter, PatternState, PatternType, enemy_emit};
-pub use entity::projectile::movement::{Attraction, Movement, update_movement};
-pub use entity::projectile::{
-    Active, Inactive, Projectile, cull_projectiles, init_projectile_pool,
-};
+pub use entity::emitter;
+pub use entity::enemy;
+pub use entity::projectile;
 
 pub const DEFAULT_SHIP_SPEED: f32 = 320.0;
 pub const DEFAULT_MAX_BULLETS: usize = 256;
 pub const DEFAULT_CULL_MARGIN: f32 = 100.0;
+pub const DEFAULT_MAX_ENEMIES: usize = 64;
 
 #[derive(Resource, Clone, Copy)]
 pub struct GameConfig {
     pub ship_speed: f32,
     pub max_bullets: usize,
     pub cull_margin: f32,
+    pub max_enemies: usize,
 }
 
 impl Default for GameConfig {
@@ -26,6 +25,7 @@ impl Default for GameConfig {
             ship_speed: DEFAULT_SHIP_SPEED,
             max_bullets: DEFAULT_MAX_BULLETS,
             cull_margin: DEFAULT_CULL_MARGIN,
+            max_enemies: DEFAULT_MAX_ENEMIES,
         }
     }
 }
@@ -68,7 +68,10 @@ impl Plugin for CorePlugin {
         app.init_resource::<MovementIntent>()
             .init_resource::<CullBoundary>()
             .init_resource::<GameConfig>()
-            .add_systems(Startup, init_projectile_pool)
+            .init_resource::<enemy::pool::EnemyPool>()
+            .init_resource::<enemy::pool::EnemyPoolStats>()
+            .add_systems(Startup, projectile::init_projectile_pool)
+            .add_systems(Startup, enemy::pool::init_enemy_pool)
             .configure_sets(
                 Update,
                 (
@@ -82,14 +85,18 @@ impl Plugin for CorePlugin {
                 Update,
                 (
                     move_ship,
-                    player_emit,
-                    enemy_emit,
-                    update_movement,
+                    emitter::player_emit,
+                    enemy::enemy_emit,
+                    projectile::movement::update_movement,
+                    enemy::lifecycle::release_dead_enemies,
                 )
                     .chain()
                     .in_set(GameplaySet::Simulation),
             )
-            .add_systems(Update, cull_projectiles.in_set(GameplaySet::Presentation));
+            .add_systems(
+                Update,
+                    (projectile::cull_projectiles, enemy::lifecycle::cull_enemies).in_set(GameplaySet::Presentation),
+            );
     }
 }
 
