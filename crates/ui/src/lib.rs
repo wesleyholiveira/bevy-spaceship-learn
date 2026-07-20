@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPlugin, egui};
-use spaceship_core::{Active, EnemyPool, EnemyPoolStats, GameConfig, Inactive, Projectile};
+use spaceship_core::enemy::{EnemyPool, EnemyPoolStats};
+use spaceship_core::projectile::{Active, Inactive, Projectile};
+use spaceship_core::GameConfig;
 
 #[derive(Resource)]
 struct FpsCounter {

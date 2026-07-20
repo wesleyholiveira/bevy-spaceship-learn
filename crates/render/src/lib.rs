@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, Window};
-use spaceship_core::{CullBoundary, Emitter, Enemy, PlayerEmitter, PlayerTarget, Projectile, Ship};
+use spaceship_core::emitter::{Emitter, PlayerEmitter};
+use spaceship_core::enemy::Enemy;
+use spaceship_core::projectile::Projectile;
+use spaceship_core::{CullBoundary, PlayerTarget, Ship};
 
 const SHIP_SIZE: Vec2 = Vec2::new(64.0, 64.0);
 const ENEMY_SIZE: Vec2 = Vec2::new(64.0, 64.0);

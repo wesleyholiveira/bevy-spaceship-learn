@@ -1,13 +1,19 @@
 use bevy::prelude::*;
 #[allow(unused_imports)]
-use spaceship_core::{
-    Active, CullBoundary, Emitter, Enemy, EnemyPool, EnemyPoolStats, GameConfig, Health, Inactive,
-    Movement, MovementIntent, PatternEmitter, PatternState, PatternType, PlayerEmitter,
-    PlayerTarget, Projectile,
+use spaceship_core::emitter::{Emitter, PlayerEmitter, player_emit};
+#[allow(unused_imports)]
+use spaceship_core::enemy::pool::{EnemyPool, EnemyPoolStats};
+#[allow(unused_imports)]
+use spaceship_core::enemy::{
+    Enemy, Health, PatternEmitter, PatternState, PatternType, cull_enemies, enemy_emit,
+    release_dead_enemies,
 };
-use spaceship_core::{
-    cull_enemies, cull_projectiles, enemy_emit, player_emit, release_dead_enemies,
-};
+#[allow(unused_imports)]
+use spaceship_core::projectile::movement::Movement;
+#[allow(unused_imports)]
+use spaceship_core::projectile::{Active, Inactive, Projectile, cull_projectiles};
+#[allow(unused_imports)]
+use spaceship_core::{CullBoundary, GameConfig, MovementIntent, PlayerTarget};
 use std::time::Duration;
 
 #[allow(dead_code)]
@@ -86,8 +92,10 @@ fn finished_timer() -> Timer {
 #[allow(dead_code)]
 fn sim_test_app() -> App {
     let mut app = App::new();
-    app.add_plugins(bevy::time::TimePlugin)
-        .add_systems(Update, spaceship_core::update_movement);
+    app.add_plugins(bevy::time::TimePlugin).add_systems(
+        Update,
+        spaceship_core::projectile::movement::update_movement,
+    );
     app
 }
 
@@ -238,7 +246,7 @@ fn keeps_diagonal_speed_normalized() {
 fn spinning_test_app() -> App {
     let mut app = App::new();
     app.init_resource::<GameConfig>()
-        .add_systems(Startup, spaceship_core::init_projectile_pool)
+        .add_systems(Startup, spaceship_core::projectile::init_projectile_pool)
         .add_systems(Update, enemy_emit);
     app
 }
@@ -300,7 +308,10 @@ fn spinning_pattern_releases_pairs() {
 #[allow(dead_code)]
 fn movement_test_app() -> App {
     let mut app = App::new();
-    app.add_systems(Update, spaceship_core::update_movement);
+    app.add_systems(
+        Update,
+        spaceship_core::projectile::movement::update_movement,
+    );
     app
 }
 
@@ -509,7 +520,7 @@ fn enemy_pool_init_test_app() -> App {
     app.init_resource::<GameConfig>()
         .init_resource::<EnemyPool>()
         .init_resource::<EnemyPoolStats>()
-        .add_systems(Startup, spaceship_core::init_enemy_pool);
+        .add_systems(Startup, spaceship_core::enemy::pool::init_enemy_pool);
     app
 }
 
@@ -563,7 +574,7 @@ fn spawn_enemy_test_app() -> App {
     app.init_resource::<GameConfig>()
         .init_resource::<EnemyPool>()
         .init_resource::<EnemyPoolStats>()
-        .add_systems(Startup, spaceship_core::init_enemy_pool);
+        .add_systems(Startup, spaceship_core::enemy::pool::init_enemy_pool);
     app
 }
 
@@ -590,7 +601,7 @@ fn spawn_enemy_activates_one_available_entity() {
     let mut app = spawn_enemy_test_app();
     app.update();
 
-    let entity = spaceship_core::spawn_enemy(
+    let entity = spaceship_core::enemy::pool::spawn_enemy(
         app.world_mut(),
         Vec2::new(10.0, 20.0),
         test_pattern(),
@@ -616,8 +627,9 @@ fn spawn_enemy_initializes_visibility_inherited() {
     let mut app = spawn_enemy_test_app();
     app.update();
 
-    let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 50.0)
-        .expect("pool is non-empty");
+    let entity =
+        spaceship_core::enemy::pool::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 50.0)
+            .expect("pool is non-empty");
 
     let world = app.world();
     assert_eq!(
@@ -633,7 +645,8 @@ fn spawn_enemy_when_pool_empty_records_failure() {
         .init_resource::<EnemyPool>()
         .init_resource::<EnemyPoolStats>();
 
-    let result = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 50.0);
+    let result =
+        spaceship_core::enemy::pool::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 50.0);
 
     assert!(result.is_none());
     let stats = app.world().resource::<EnemyPoolStats>();
@@ -645,16 +658,20 @@ fn release_enemy_makes_entity_inactive_and_returns_to_pool() {
     let mut app = spawn_enemy_test_app();
     app.update();
 
-    let entity =
-        spaceship_core::spawn_enemy(app.world_mut(), Vec2::new(5.0, 5.0), test_pattern(), 50.0)
-            .expect("pool is non-empty");
+    let entity = spaceship_core::enemy::pool::spawn_enemy(
+        app.world_mut(),
+        Vec2::new(5.0, 5.0),
+        test_pattern(),
+        50.0,
+    )
+    .expect("pool is non-empty");
 
     assert_eq!(
         app.world().resource::<EnemyPool>().available_count(),
         GameConfig::default().max_enemies - 1
     );
 
-    spaceship_core::release_enemy(app.world_mut(), entity);
+    spaceship_core::enemy::pool::release_enemy(app.world_mut(), entity);
 
     let world = app.world();
     assert!(world.get::<Active>(entity).is_none());
@@ -679,13 +696,18 @@ fn release_enemy_clears_pattern_and_health_state() {
     let mut app = spawn_enemy_test_app();
     app.update();
 
-    let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 100.0)
-        .expect("pool is non-empty");
+    let entity = spaceship_core::enemy::pool::spawn_enemy(
+        app.world_mut(),
+        Vec2::ZERO,
+        test_pattern(),
+        100.0,
+    )
+    .expect("pool is non-empty");
 
     assert!(app.world().get::<PatternEmitter>(entity).is_some());
     assert!(app.world().get::<Health>(entity).is_some());
 
-    spaceship_core::release_enemy(app.world_mut(), entity);
+    spaceship_core::enemy::pool::release_enemy(app.world_mut(), entity);
 
     let world = app.world();
     assert!(
@@ -703,11 +725,15 @@ fn enemy_can_be_activated_released_and_activated_again_with_new_state() {
     let mut app = spawn_enemy_test_app();
     app.update();
 
-    let entity =
-        spaceship_core::spawn_enemy(app.world_mut(), Vec2::new(1.0, 2.0), test_pattern(), 30.0)
-            .expect("pool is non-empty");
+    let entity = spaceship_core::enemy::pool::spawn_enemy(
+        app.world_mut(),
+        Vec2::new(1.0, 2.0),
+        test_pattern(),
+        30.0,
+    )
+    .expect("pool is non-empty");
 
-    spaceship_core::release_enemy(app.world_mut(), entity);
+    spaceship_core::enemy::pool::release_enemy(app.world_mut(), entity);
 
     let different_pattern = PatternEmitter {
         fire_rate: Timer::from_seconds(0.2, TimerMode::Repeating),
@@ -727,7 +753,7 @@ fn enemy_can_be_activated_released_and_activated_again_with_new_state() {
         state: PatternState::default(),
     };
 
-    let reactivated = spaceship_core::spawn_enemy(
+    let reactivated = spaceship_core::enemy::pool::spawn_enemy(
         app.world_mut(),
         Vec2::new(50.0, 60.0),
         different_pattern,
@@ -758,8 +784,13 @@ fn simultaneous_spawns_acquire_distinct_entities() {
 
     let mut acquired = Vec::new();
     for _ in 0..GameConfig::default().max_enemies {
-        let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 10.0)
-            .expect("pool should still have entities");
+        let entity = spaceship_core::enemy::pool::spawn_enemy(
+            app.world_mut(),
+            Vec2::ZERO,
+            test_pattern(),
+            10.0,
+        )
+        .expect("pool should still have entities");
         acquired.push(entity);
     }
 
@@ -770,7 +801,8 @@ fn simultaneous_spawns_acquire_distinct_entities() {
         "no entity may be acquired twice"
     );
 
-    let fourth = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 10.0);
+    let fourth =
+        spaceship_core::enemy::pool::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 10.0);
     assert!(fourth.is_none(), "exhausted pool returns None");
     assert_eq!(
         app.world().resource::<EnemyPoolStats>().failed_spawns,
@@ -786,7 +818,7 @@ fn enemy_cull_test_app(boundary: CullBoundary) -> App {
         .init_resource::<EnemyPool>()
         .init_resource::<EnemyPoolStats>()
         .insert_resource(boundary)
-        .add_systems(Startup, spaceship_core::init_enemy_pool)
+        .add_systems(Startup, spaceship_core::enemy::pool::init_enemy_pool)
         .add_systems(Update, cull_enemies);
     app
 }
@@ -800,7 +832,7 @@ fn cull_enemies_releases_enemy_outside_boundary() {
 
     app.update(); // run Startup to initialize the pool
 
-    let entity = spaceship_core::spawn_enemy(
+    let entity = spaceship_core::enemy::pool::spawn_enemy(
         app.world_mut(),
         Vec2::new(1_000.0, 0.0),
         test_pattern(),
@@ -829,7 +861,7 @@ fn cull_enemies_keeps_enemy_inside_boundary() {
 
     app.update(); // run Startup to initialize the pool
 
-    let entity = spaceship_core::spawn_enemy(
+    let entity = spaceship_core::enemy::pool::spawn_enemy(
         app.world_mut(),
         Vec2::new(50.0, 50.0),
         test_pattern(),
@@ -853,7 +885,7 @@ fn dead_enemy_test_app() -> App {
     app.init_resource::<GameConfig>()
         .init_resource::<EnemyPool>()
         .init_resource::<EnemyPoolStats>()
-        .add_systems(Startup, spaceship_core::init_enemy_pool)
+        .add_systems(Startup, spaceship_core::enemy::pool::init_enemy_pool)
         .add_systems(Update, release_dead_enemies);
     app
 }
@@ -864,8 +896,9 @@ fn release_dead_enemies_returns_zero_hp_to_pool() {
 
     app.update(); // run Startup to initialize the pool
 
-    let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 0.0)
-        .expect("pool is non-empty");
+    let entity =
+        spaceship_core::enemy::pool::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 0.0)
+            .expect("pool is non-empty");
 
     app.update();
 
@@ -885,8 +918,9 @@ fn release_dead_enemies_keeps_alive_enemies() {
 
     app.update(); // run Startup to initialize the pool
 
-    let entity = spaceship_core::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 50.0)
-        .expect("pool is non-empty");
+    let entity =
+        spaceship_core::enemy::pool::spawn_enemy(app.world_mut(), Vec2::ZERO, test_pattern(), 50.0)
+            .expect("pool is non-empty");
 
     app.update();
 
