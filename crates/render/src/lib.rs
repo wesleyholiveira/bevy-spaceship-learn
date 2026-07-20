@@ -11,6 +11,19 @@ const PROJECTILE_SIZE: Vec2 = Vec2::new(8.0, 16.0);
 const PROJECTILE_COLOR: Color = Color::srgb(1.0, 0.8, 0.2);
 const ENEMY_COLOR: Color = Color::srgb(1.0, 0.2, 0.2);
 
+/// Computes the number of spatial-hash cells needed to cover the play area.
+/// `half_width` / `half_height` describe the visible half-extents; the grid is
+/// centered at the origin, so total coverage is `2 * half` per axis. Partial
+/// cells are rounded up so the grid always fully tiles the play area. Each axis
+/// is floored to a minimum of 1 cell.
+#[allow(dead_code)]
+fn grid_dimensions(half_width: f32, half_height: f32, cell_size: f32) -> UVec2 {
+    let safe_cell = cell_size.max(1.0);
+    let cells_x = ((2.0 * half_width) / safe_cell).ceil() as u32;
+    let cells_y = ((2.0 * half_height) / safe_cell).ceil() as u32;
+    UVec2::new(cells_x.max(1), cells_y.max(1))
+}
+
 pub struct RenderPlugin;
 
 impl Plugin for RenderPlugin {
@@ -65,5 +78,32 @@ fn sync_cull_boundary(
     if let Ok(window) = windows.single() {
         boundary.half_width = window.width() / 2.0;
         boundary.half_height = window.height() / 2.0;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::math::UVec2;
+
+    #[test]
+    fn grid_dimensions_covers_play_area() {
+        // 1280x720 play area, 128px cells -> 10 x 6 cells
+        let dims = grid_dimensions(640.0, 360.0, 128.0);
+        assert_eq!(dims, UVec2::new(10, 6));
+    }
+
+    #[test]
+    fn grid_dimensions_rounds_up_partial_cells() {
+        // 720 / 130 = 5.538 -> ceil = 6
+        let dims = grid_dimensions(640.0, 360.0, 130.0);
+        assert_eq!(dims.x, 10); // 1280/130 = 9.846 -> 10
+        assert_eq!(dims.y, 6); // 720/130 = 5.538 -> 6
+    }
+
+    #[test]
+    fn grid_dimensions_floors_to_minimum_one_cell() {
+        let dims = grid_dimensions(10.0, 10.0, 128.0);
+        assert_eq!(dims, UVec2::new(1, 1));
     }
 }
