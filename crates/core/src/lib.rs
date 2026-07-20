@@ -10,6 +10,7 @@ pub const DEFAULT_SHIP_SPEED: f32 = 320.0;
 pub const DEFAULT_MAX_BULLETS: usize = 256;
 pub const DEFAULT_CULL_MARGIN: f32 = 100.0;
 pub const DEFAULT_MAX_ENEMIES: usize = 64;
+pub const DEFAULT_SPATIAL_HASH_CELL_SIZE: f32 = 128.0;
 
 #[derive(Resource, Clone, Copy)]
 pub struct GameConfig {
@@ -26,6 +27,19 @@ impl Default for GameConfig {
             max_bullets: DEFAULT_MAX_BULLETS,
             cull_margin: DEFAULT_CULL_MARGIN,
             max_enemies: DEFAULT_MAX_ENEMIES,
+        }
+    }
+}
+
+#[derive(Resource, Clone, Copy)]
+pub struct SpatialHashConfig {
+    pub cell_size: f32,
+}
+
+impl Default for SpatialHashConfig {
+    fn default() -> Self {
+        Self {
+            cell_size: DEFAULT_SPATIAL_HASH_CELL_SIZE,
         }
     }
 }
@@ -68,6 +82,7 @@ impl Plugin for CorePlugin {
         app.init_resource::<MovementIntent>()
             .init_resource::<CullBoundary>()
             .init_resource::<GameConfig>()
+            .init_resource::<SpatialHashConfig>()
             .init_resource::<enemy::pool::EnemyPool>()
             .init_resource::<enemy::pool::EnemyPoolStats>()
             .add_systems(Startup, projectile::init_projectile_pool)

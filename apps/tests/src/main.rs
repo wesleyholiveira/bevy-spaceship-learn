@@ -932,6 +932,20 @@ fn release_dead_enemies_keeps_alive_enemies() {
     );
 }
 
+#[test]
+fn spatial_hash_default_cell_size_is_positive() {
+    assert!(
+        spaceship_core::SpatialHashConfig::default().cell_size > 0.0,
+        "default cell size must be positive"
+    );
+}
+
+#[test]
+#[allow(clippy::assertions_on_constants)]
+fn exposes_default_spatial_hash_cell_size_const() {
+    assert!(spaceship_core::DEFAULT_SPATIAL_HASH_CELL_SIZE > 0.0);
+}
+
 fn main() {
     println!("Run tests with: cargo test -p tests");
 }
