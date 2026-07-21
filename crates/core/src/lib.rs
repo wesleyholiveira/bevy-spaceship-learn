@@ -2,6 +2,8 @@ mod entity;
 
 use bevy::prelude::*;
 
+pub use entity::collision;
+pub use entity::collision::{CellQueryDebug, HitFlash};
 pub use entity::emitter;
 pub use entity::enemy;
 pub use entity::projectile;
@@ -11,6 +13,10 @@ pub const DEFAULT_MAX_BULLETS: usize = 256;
 pub const DEFAULT_CULL_MARGIN: f32 = 100.0;
 pub const DEFAULT_MAX_ENEMIES: usize = 64;
 pub const DEFAULT_SPATIAL_HASH_CELL_SIZE: f32 = 128.0;
+
+pub const SHIP_HALF_SIZE: Vec2 = Vec2::new(32.0, 32.0);
+pub const ENEMY_HALF_SIZE: Vec2 = Vec2::new(32.0, 32.0);
+pub const PROJECTILE_HALF_SIZE: Vec2 = Vec2::new(4.0, 8.0);
 
 #[derive(Resource, Clone, Copy)]
 pub struct GameConfig {
@@ -85,6 +91,7 @@ impl Plugin for CorePlugin {
             .init_resource::<SpatialHashConfig>()
             .init_resource::<enemy::pool::EnemyPool>()
             .init_resource::<enemy::pool::EnemyPoolStats>()
+            .init_resource::<CellQueryDebug>()
             .add_systems(Startup, projectile::init_projectile_pool)
             .add_systems(Startup, enemy::pool::init_enemy_pool)
             .configure_sets(
@@ -103,6 +110,7 @@ impl Plugin for CorePlugin {
                     emitter::player_emit,
                     enemy::enemy_emit,
                     projectile::movement::update_movement,
+                    collision::detect_collisions,
                     enemy::lifecycle::release_dead_enemies,
                 )
                     .chain()
@@ -110,7 +118,11 @@ impl Plugin for CorePlugin {
             )
             .add_systems(
                 Update,
-                (projectile::cull_projectiles, enemy::lifecycle::cull_enemies)
+                (
+                    projectile::cull_projectiles,
+                    enemy::lifecycle::cull_enemies,
+                    collision::tick_hit_flash,
+                )
                     .in_set(GameplaySet::Presentation),
             );
     }

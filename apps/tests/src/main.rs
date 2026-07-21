@@ -11,7 +11,7 @@ use spaceship_core::enemy::{
 #[allow(unused_imports)]
 use spaceship_core::projectile::movement::Movement;
 #[allow(unused_imports)]
-use spaceship_core::projectile::{Active, Inactive, Projectile, cull_projectiles};
+use spaceship_core::projectile::{Active, Inactive, Projectile, ProjectileOwner, cull_projectiles};
 #[allow(unused_imports)]
 use spaceship_core::{CullBoundary, GameConfig, MovementIntent, PlayerTarget};
 use std::time::Duration;
@@ -23,6 +23,7 @@ fn spawn_active_projectile(world: &mut World, position: Vec3) -> Entity {
             Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(1.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Active,
             Movement::linear(Vec2::Y * 600.0),
@@ -109,6 +110,7 @@ fn releases_projectile_when_lifetime_expires() {
             Projectile {
                 damage: 1.0,
                 lifetime: finished_timer(),
+                owner: ProjectileOwner::default(),
             },
             Movement::linear(Vec2::Y * 600.0),
             Transform::default(),
@@ -159,6 +161,7 @@ fn acquire_reuses_inactive_entity() {
             Projectile {
                 damage: 0.0,
                 lifetime: Timer::from_seconds(1.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Transform::default(),
         ))
@@ -170,6 +173,7 @@ fn acquire_reuses_inactive_entity() {
             Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(3.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Movement::linear(Vec2::Y * 600.0),
             Transform::from_translation(Vec3::new(10.0, 10.0, 0.0)),
@@ -204,6 +208,7 @@ fn pool_exhaustion_silently_skips() {
             Projectile {
                 damage: 0.0,
                 lifetime: Timer::from_seconds(3.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Transform::default(),
         ));
@@ -327,6 +332,7 @@ fn linear_movement_maintains_constant_velocity() {
             Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Transform::default(),
         ))
@@ -363,6 +369,7 @@ fn accelerated_movement_changes_velocity_over_time() {
             Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Transform::default(),
         ))
@@ -399,6 +406,7 @@ fn asymptotic_movement_transitions_smoothly() {
             Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Transform::default(),
         ))
@@ -431,6 +439,7 @@ fn attraction_movement_curves_toward_target() {
             Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Transform::default(),
         ))
@@ -467,6 +476,7 @@ fn movement_builder_creates_custom_combinations() {
             Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Transform::default(),
         ))

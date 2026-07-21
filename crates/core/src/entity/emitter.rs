@@ -1,4 +1,4 @@
-use crate::entity::projectile::{Active, Inactive, Projectile};
+use crate::entity::projectile::{Active, Inactive, Projectile, ProjectileOwner};
 
 use bevy::prelude::*;
 
@@ -42,6 +42,7 @@ pub fn player_emit(
             .insert(Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(3.0, TimerMode::Once),
+                owner: ProjectileOwner::Player,
             });
     }
 }

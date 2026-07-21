@@ -3,7 +3,7 @@ pub mod pool;
 pub use lifecycle::{cull_enemies, release_dead_enemies};
 
 use crate::PlayerTarget;
-use crate::entity::projectile::{Active, Inactive, Projectile};
+use crate::entity::projectile::{Active, Inactive, Projectile, ProjectileOwner};
 
 use bevy::prelude::*;
 
@@ -117,6 +117,7 @@ pub fn enemy_emit(
                         .insert(Projectile {
                             damage: 1.0,
                             lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+                            owner: ProjectileOwner::Enemy,
                         });
                 }
             }
@@ -171,6 +172,7 @@ pub fn enemy_emit(
                         .insert(Projectile {
                             damage: 1.0,
                             lifetime: Timer::from_seconds(5.0, TimerMode::Once),
+                            owner: ProjectileOwner::Enemy,
                         });
                 }
 

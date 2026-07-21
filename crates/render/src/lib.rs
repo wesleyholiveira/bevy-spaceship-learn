@@ -5,11 +5,14 @@ use bevy::window::{PrimaryWindow, Window};
 use spaceship_core::emitter::{Emitter, PlayerEmitter};
 use spaceship_core::enemy::Enemy;
 use spaceship_core::projectile::Projectile;
-use spaceship_core::{CullBoundary, PlayerTarget, Ship, SpatialHashConfig};
+use spaceship_core::{
+    CullBoundary, ENEMY_HALF_SIZE, PROJECTILE_HALF_SIZE, PlayerTarget, SHIP_HALF_SIZE, Ship,
+    SpatialHashConfig,
+};
 
-const SHIP_SIZE: Vec2 = Vec2::new(64.0, 64.0);
-const ENEMY_SIZE: Vec2 = Vec2::new(64.0, 64.0);
-const PROJECTILE_SIZE: Vec2 = Vec2::new(8.0, 16.0);
+const SHIP_SIZE: Vec2 = Vec2::new(SHIP_HALF_SIZE.x * 2.0, SHIP_HALF_SIZE.y * 2.0);
+const ENEMY_SIZE: Vec2 = Vec2::new(ENEMY_HALF_SIZE.x * 2.0, ENEMY_HALF_SIZE.y * 2.0);
+const PROJECTILE_SIZE: Vec2 = Vec2::new(PROJECTILE_HALF_SIZE.x * 2.0, PROJECTILE_HALF_SIZE.y * 2.0);
 const PROJECTILE_COLOR: Color = Color::srgb(1.0, 0.8, 0.2);
 const ENEMY_COLOR: Color = Color::srgb(1.0, 0.2, 0.2);
 
