@@ -24,13 +24,26 @@ fn grid_dimensions(half_width: f32, half_height: f32, cell_size: f32) -> UVec2 {
     UVec2::new(cells_x.max(1), cells_y.max(1))
 }
 
+#[derive(Resource, Default)]
+struct GridOverlay {
+    visible: bool,
+}
+
+fn toggle_grid_overlay(keyboard: Res<ButtonInput<KeyCode>>, mut overlay: ResMut<GridOverlay>) {
+    if keyboard.just_pressed(KeyCode::F2) {
+        overlay.visible = !overlay.visible;
+    }
+}
+
 pub struct RenderPlugin;
 
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::srgb(0.015, 0.02, 0.04)))
+            .init_resource::<GridOverlay>()
             .add_systems(Startup, setup_scene)
-            .add_systems(Update, (sync_cull_boundary, ensure_projectile_sprite, ensure_enemy_sprite));
+            .add_systems(Update, (sync_cull_boundary, ensure_projectile_sprite, ensure_enemy_sprite))
+            .add_systems(Update, toggle_grid_overlay);
     }
 }
 
@@ -105,5 +118,57 @@ mod tests {
     fn grid_dimensions_floors_to_minimum_one_cell() {
         let dims = grid_dimensions(10.0, 10.0, 128.0);
         assert_eq!(dims, UVec2::new(1, 1));
+    }
+
+    use bevy::ecs::system::RunSystemOnce;
+
+    #[test]
+    fn toggle_flips_visible_on_f2() {
+        let mut world = World::new();
+        let mut keyboard = ButtonInput::<KeyCode>::default();
+        keyboard.press(KeyCode::F2);
+        world.insert_resource(keyboard);
+        world.init_resource::<GridOverlay>();
+        world.run_system_once(toggle_grid_overlay).unwrap();
+        assert!(
+            world.resource::<GridOverlay>().visible,
+            "F2 should make the grid overlay visible"
+        );
+    }
+
+    #[test]
+    fn toggle_ignores_other_keys() {
+        let mut world = World::new();
+        let mut keyboard = ButtonInput::<KeyCode>::default();
+        keyboard.press(KeyCode::F1);
+        world.insert_resource(keyboard);
+        world.init_resource::<GridOverlay>();
+        world.run_system_once(toggle_grid_overlay).unwrap();
+        assert!(
+            !world.resource::<GridOverlay>().visible,
+            "F1 must not toggle the grid overlay"
+        );
+    }
+
+    #[test]
+    fn toggle_off_after_two_presses() {
+        let mut world = World::new();
+        let mut keyboard = ButtonInput::<KeyCode>::default();
+        world.init_resource::<GridOverlay>();
+        // First press
+        keyboard.press(KeyCode::F2);
+        world.insert_resource(keyboard.clone());
+        world.run_system_once(toggle_grid_overlay).unwrap();
+        assert!(world.resource::<GridOverlay>().visible, "first press should show");
+        // Update to clear just_pressed, then press again
+        keyboard.release(KeyCode::F2);
+        keyboard.clear_just_released(KeyCode::F2);
+        keyboard.press(KeyCode::F2);
+        world.insert_resource(keyboard);
+        world.run_system_once(toggle_grid_overlay).unwrap();
+        assert!(
+            !world.resource::<GridOverlay>().visible,
+            "second F2 press should hide the grid overlay"
+        );
     }
 }
