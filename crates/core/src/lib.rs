@@ -110,7 +110,8 @@ impl Plugin for CorePlugin {
             )
             .add_systems(
                 Update,
-                    (projectile::cull_projectiles, enemy::lifecycle::cull_enemies).in_set(GameplaySet::Presentation),
+                (projectile::cull_projectiles, enemy::lifecycle::cull_enemies)
+                    .in_set(GameplaySet::Presentation),
             );
     }
 }

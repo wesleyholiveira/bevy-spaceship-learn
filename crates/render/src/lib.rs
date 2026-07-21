@@ -48,7 +48,12 @@ fn draw_grid_overlay(
 
     let cells = grid_dimensions(boundary.half_width, boundary.half_height, config.cell_size);
     gizmos
-        .grid_2d(Isometry2d::IDENTITY, cells, Vec2::splat(config.cell_size), GREEN)
+        .grid_2d(
+            Isometry2d::IDENTITY,
+            cells,
+            Vec2::splat(config.cell_size),
+            GREEN,
+        )
         .outer_edges();
 }
 
@@ -59,7 +64,14 @@ impl Plugin for RenderPlugin {
         app.insert_resource(ClearColor(Color::srgb(0.015, 0.02, 0.04)))
             .init_resource::<GridOverlay>()
             .add_systems(Startup, setup_scene)
-            .add_systems(Update, (sync_cull_boundary, ensure_projectile_sprite, ensure_enemy_sprite))
+            .add_systems(
+                Update,
+                (
+                    sync_cull_boundary,
+                    ensure_projectile_sprite,
+                    ensure_enemy_sprite,
+                ),
+            )
             .add_systems(Update, (toggle_grid_overlay, draw_grid_overlay).chain());
     }
 }
@@ -176,7 +188,10 @@ mod tests {
         keyboard.press(KeyCode::F2);
         world.insert_resource(keyboard.clone());
         world.run_system_once(toggle_grid_overlay).unwrap();
-        assert!(world.resource::<GridOverlay>().visible, "first press should show");
+        assert!(
+            world.resource::<GridOverlay>().visible,
+            "first press should show"
+        );
         // Update to clear just_pressed, then press again
         keyboard.release(KeyCode::F2);
         keyboard.clear_just_released(KeyCode::F2);

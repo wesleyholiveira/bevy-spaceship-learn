@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use bevy::window::WindowPlugin;
+use spaceship_core::CorePlugin;
 use spaceship_core::enemy::pool::{init_enemy_pool, spawn_enemy};
 use spaceship_core::enemy::{PatternEmitter, PatternState, PatternType};
-use spaceship_core::CorePlugin;
 use spaceship_input::InputPlugin;
 use spaceship_render::RenderPlugin;
 use spaceship_ui::UiPlugin;
