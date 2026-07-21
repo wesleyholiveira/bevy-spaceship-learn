@@ -1,9 +1,11 @@
+use bevy::color::palettes::basic::GREEN;
+use bevy::math::Isometry2d;
 use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, Window};
 use spaceship_core::emitter::{Emitter, PlayerEmitter};
 use spaceship_core::enemy::Enemy;
 use spaceship_core::projectile::Projectile;
-use spaceship_core::{CullBoundary, PlayerTarget, Ship};
+use spaceship_core::{CullBoundary, PlayerTarget, Ship, SpatialHashConfig};
 
 const SHIP_SIZE: Vec2 = Vec2::new(64.0, 64.0);
 const ENEMY_SIZE: Vec2 = Vec2::new(64.0, 64.0);
@@ -16,7 +18,6 @@ const ENEMY_COLOR: Color = Color::srgb(1.0, 0.2, 0.2);
 /// centered at the origin, so total coverage is `2 * half` per axis. Partial
 /// cells are rounded up so the grid always fully tiles the play area. Each axis
 /// is floored to a minimum of 1 cell.
-#[allow(dead_code)]
 fn grid_dimensions(half_width: f32, half_height: f32, cell_size: f32) -> UVec2 {
     let safe_cell = cell_size.max(1.0);
     let cells_x = ((2.0 * half_width) / safe_cell).ceil() as u32;
@@ -35,6 +36,22 @@ fn toggle_grid_overlay(keyboard: Res<ButtonInput<KeyCode>>, mut overlay: ResMut<
     }
 }
 
+fn draw_grid_overlay(
+    overlay: Res<GridOverlay>,
+    boundary: Res<CullBoundary>,
+    config: Res<SpatialHashConfig>,
+    mut gizmos: Gizmos,
+) {
+    if !overlay.visible {
+        return;
+    }
+
+    let cells = grid_dimensions(boundary.half_width, boundary.half_height, config.cell_size);
+    gizmos
+        .grid_2d(Isometry2d::IDENTITY, cells, Vec2::splat(config.cell_size), GREEN)
+        .outer_edges();
+}
+
 pub struct RenderPlugin;
 
 impl Plugin for RenderPlugin {
@@ -43,7 +60,7 @@ impl Plugin for RenderPlugin {
             .init_resource::<GridOverlay>()
             .add_systems(Startup, setup_scene)
             .add_systems(Update, (sync_cull_boundary, ensure_projectile_sprite, ensure_enemy_sprite))
-            .add_systems(Update, toggle_grid_overlay);
+            .add_systems(Update, (toggle_grid_overlay, draw_grid_overlay).chain());
     }
 }
 
