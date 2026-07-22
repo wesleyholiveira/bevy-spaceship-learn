@@ -118,7 +118,8 @@ pub fn update_movement(
 
             if distance > 0.01 {
                 let direction = to_target / distance;
-                let force_magnitude = attraction.strength * distance.powf(attraction.exponent - 1.0);
+                let force_magnitude =
+                    attraction.strength * distance.powf(attraction.exponent - 1.0);
                 new_velocity += direction * force_magnitude * time.delta_secs();
             }
         }

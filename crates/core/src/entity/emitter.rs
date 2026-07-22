@@ -1,4 +1,4 @@
-use crate::entity::projectile::{Active, Inactive, Projectile};
+use crate::entity::projectile::{Active, Inactive, Projectile, ProjectileOwner};
 
 use bevy::prelude::*;
 
@@ -14,7 +14,7 @@ pub fn player_emit(
     time: Res<Time>,
     mut commands: Commands,
     mut emitters: Query<(Entity, &Transform, &mut Emitter), With<PlayerEmitter>>,
-    inactive: Query<Entity, With<Inactive>>,
+    inactive: Query<Entity, (With<Inactive>, With<Projectile>)>,
 ) {
     for (_entity, transform, mut emitter) in &mut emitters {
         emitter.fire_rate.tick(time.delta());
@@ -36,10 +36,13 @@ pub fn player_emit(
             .insert(Active)
             .insert(Visibility::Inherited)
             .insert(Transform::from_translation(origin.extend(0.0)))
-            .insert(crate::entity::projectile::movement::Movement::linear(velocity))
+            .insert(crate::entity::projectile::movement::Movement::linear(
+                velocity,
+            ))
             .insert(Projectile {
                 damage: 1.0,
                 lifetime: Timer::from_seconds(3.0, TimerMode::Once),
+                owner: ProjectileOwner::Player,
             });
     }
 }

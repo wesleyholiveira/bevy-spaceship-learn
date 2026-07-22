@@ -5,10 +5,18 @@ use crate::{CullBoundary, GameConfig};
 use bevy::prelude::*;
 use bevy::time::Timer;
 
+#[derive(Component, Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ProjectileOwner {
+    #[default]
+    Player,
+    Enemy,
+}
+
 #[derive(Component)]
 pub struct Projectile {
     pub damage: f32,
     pub lifetime: Timer,
+    pub owner: ProjectileOwner,
 }
 
 #[derive(Component)]
@@ -25,6 +33,7 @@ pub fn init_projectile_pool(mut commands: Commands, config: Res<GameConfig>) {
             Projectile {
                 damage: 0.0,
                 lifetime: Timer::from_seconds(0.0, TimerMode::Once),
+                owner: ProjectileOwner::default(),
             },
             Inactive,
             Visibility::Hidden,
@@ -52,5 +61,15 @@ pub fn cull_projectiles(
                 .insert(Inactive)
                 .insert(Visibility::Hidden);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn projectile_owner_defaults_to_player() {
+        assert_eq!(ProjectileOwner::default(), ProjectileOwner::Player);
     }
 }
