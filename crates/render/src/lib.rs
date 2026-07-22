@@ -6,8 +6,8 @@ use spaceship_core::emitter::{Emitter, PlayerEmitter};
 use spaceship_core::enemy::Enemy;
 use spaceship_core::projectile::Projectile;
 use spaceship_core::{
-    CullBoundary, ENEMY_HALF_SIZE, PROJECTILE_HALF_SIZE, PlayerTarget, SHIP_HALF_SIZE, Ship,
-    SpatialHashConfig,
+    CellQueryDebug, CullBoundary, ENEMY_HALF_SIZE, HitFlash, PROJECTILE_HALF_SIZE, PlayerTarget,
+    SHIP_HALF_SIZE, Ship, SpatialHashConfig,
 };
 
 const SHIP_SIZE: Vec2 = Vec2::new(SHIP_HALF_SIZE.x * 2.0, SHIP_HALF_SIZE.y * 2.0);
@@ -15,6 +15,9 @@ const ENEMY_SIZE: Vec2 = Vec2::new(ENEMY_HALF_SIZE.x * 2.0, ENEMY_HALF_SIZE.y * 
 const PROJECTILE_SIZE: Vec2 = Vec2::new(PROJECTILE_HALF_SIZE.x * 2.0, PROJECTILE_HALF_SIZE.y * 2.0);
 const PROJECTILE_COLOR: Color = Color::srgb(1.0, 0.8, 0.2);
 const ENEMY_COLOR: Color = Color::srgb(1.0, 0.2, 0.2);
+
+#[derive(Component, Clone, Copy)]
+pub struct BaseColor(pub Color);
 
 /// Computes the number of spatial-hash cells needed to cover the play area.
 /// `half_width` / `half_height` describe the visible half-extents; the grid is
@@ -43,6 +46,7 @@ fn draw_grid_overlay(
     overlay: Res<GridOverlay>,
     boundary: Res<CullBoundary>,
     config: Res<SpatialHashConfig>,
+    cell_query: Res<CellQueryDebug>,
     mut gizmos: Gizmos,
 ) {
     if !overlay.visible {
@@ -50,6 +54,22 @@ fn draw_grid_overlay(
     }
 
     let cells = grid_dimensions(boundary.half_width, boundary.half_height, config.cell_size);
+    let cell_size = config.cell_size.max(1.0);
+
+    // Highlight queried cells
+    for &cell in &cell_query.0 {
+        let cell_origin = Vec2::new(cell.x as f32, cell.y as f32) * cell_size;
+        let cell_center = cell_origin + Vec2::splat(cell_size / 2.0);
+        gizmos
+            .grid_2d(
+                Isometry2d::from_translation(cell_center),
+                UVec2::new(1, 1),
+                Vec2::splat(cell_size),
+                Color::srgb(1.0, 1.0, 0.3),
+            )
+            .outer_edges();
+    }
+
     gizmos
         .grid_2d(
             Isometry2d::IDENTITY,
@@ -73,6 +93,7 @@ impl Plugin for RenderPlugin {
                     sync_cull_boundary,
                     ensure_projectile_sprite,
                     ensure_enemy_sprite,
+                    apply_hit_flash,
                 ),
             )
             .add_systems(Update, (toggle_grid_overlay, draw_grid_overlay).chain());
@@ -89,7 +110,10 @@ fn setup_scene(mut commands: Commands) {
             fire_rate: Timer::from_seconds(0.2, TimerMode::Repeating),
         },
         PlayerEmitter,
-        Sprite::from_color(Color::srgb(0.2, 0.75, 1.0), SHIP_SIZE),
+        (
+            Sprite::from_color(Color::srgb(0.2, 0.75, 1.0), SHIP_SIZE),
+            BaseColor(Color::srgb(0.2, 0.75, 1.0)),
+        ),
         Transform::default(),
     ));
 }
@@ -99,9 +123,10 @@ fn ensure_projectile_sprite(
     projectiles: Query<Entity, (With<Projectile>, Without<Sprite>)>,
 ) {
     for entity in &projectiles {
-        commands
-            .entity(entity)
-            .insert(Sprite::from_color(PROJECTILE_COLOR, PROJECTILE_SIZE));
+        commands.entity(entity).insert((
+            Sprite::from_color(PROJECTILE_COLOR, PROJECTILE_SIZE),
+            BaseColor(PROJECTILE_COLOR),
+        ));
     }
 }
 
@@ -110,9 +135,17 @@ fn ensure_enemy_sprite(
     enemies: Query<Entity, (With<Enemy>, Without<Sprite>)>,
 ) {
     for entity in &enemies {
-        commands
-            .entity(entity)
-            .insert(Sprite::from_color(ENEMY_COLOR, ENEMY_SIZE));
+        commands.entity(entity).insert((
+            Sprite::from_color(ENEMY_COLOR, ENEMY_SIZE),
+            BaseColor(ENEMY_COLOR),
+        ));
+    }
+}
+
+fn apply_hit_flash(mut query: Query<(&mut Sprite, &BaseColor, &HitFlash)>) {
+    for (mut sprite, base, flash) in &mut query {
+        let ratio = flash.remaining / flash.total;
+        sprite.color = base.0.mix(&Color::WHITE, ratio);
     }
 }
 

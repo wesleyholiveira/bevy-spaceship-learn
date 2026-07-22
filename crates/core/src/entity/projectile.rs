@@ -63,3 +63,13 @@ pub fn cull_projectiles(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn projectile_owner_defaults_to_player() {
+        assert_eq!(ProjectileOwner::default(), ProjectileOwner::Player);
+    }
+}

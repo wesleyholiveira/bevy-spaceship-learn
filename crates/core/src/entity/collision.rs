@@ -161,3 +161,73 @@ pub fn tick_hit_flash(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cell_index_centers_origin_at_zero() {
+        let idx = cell_index(Vec2::ZERO, 128.0);
+        assert_eq!(idx, IVec2::new(0, 0));
+    }
+
+    #[test]
+    fn cell_index_positive_position() {
+        let idx = cell_index(Vec2::new(150.0, 300.0), 128.0);
+        assert_eq!(idx, IVec2::new(1, 2));
+    }
+
+    #[test]
+    fn cell_index_negative_position() {
+        let idx = cell_index(Vec2::new(-150.0, -300.0), 128.0);
+        assert_eq!(idx, IVec2::new(-2, -3));
+    }
+
+    #[test]
+    fn cell_index_on_boundary() {
+        // Exactly at 128.0 → cell x = 1.0, floor = 1
+        let idx = cell_index(Vec2::new(128.0, 0.0), 128.0);
+        assert_eq!(idx, IVec2::new(1, 0));
+    }
+
+    #[test]
+    fn cell_index_handles_zero_cell_size() {
+        let idx = cell_index(Vec2::new(150.0, 0.0), 0.0);
+        // Should not panic; safe_cell = 1.0
+        assert_eq!(idx, IVec2::new(150, 0));
+    }
+
+    #[test]
+    fn aabb_overlap_detects_intersection() {
+        assert!(aabb_overlap(
+            Vec2::ZERO,
+            Vec2::new(10.0, 10.0),
+            Vec2::new(5.0, 0.0),
+            Vec2::new(10.0, 10.0),
+        ));
+    }
+
+    #[test]
+    fn aabb_overlap_distant_does_not_intersect() {
+        assert!(!aabb_overlap(
+            Vec2::ZERO,
+            Vec2::new(10.0, 10.0),
+            Vec2::new(100.0, 0.0),
+            Vec2::new(10.0, 10.0),
+        ));
+    }
+
+    #[test]
+    fn hit_flash_new_creates_timer_with_correct_duration() {
+        let flash = HitFlash::new(0.15);
+        assert!((flash.remaining - 0.15).abs() < f32::EPSILON);
+        assert!((flash.total - 0.15).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn cell_query_debug_defaults_to_empty() {
+        let debug = CellQueryDebug::default();
+        assert!(debug.0.is_empty());
+    }
+}

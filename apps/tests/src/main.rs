@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 #[allow(unused_imports)]
+use spaceship_core::collision::{CellQueryDebug, HitFlash};
+#[allow(unused_imports)]
 use spaceship_core::emitter::{Emitter, PlayerEmitter, player_emit};
 #[allow(unused_imports)]
 use spaceship_core::enemy::pool::{EnemyPool, EnemyPoolStats};
@@ -13,7 +15,9 @@ use spaceship_core::projectile::movement::Movement;
 #[allow(unused_imports)]
 use spaceship_core::projectile::{Active, Inactive, Projectile, ProjectileOwner, cull_projectiles};
 #[allow(unused_imports)]
-use spaceship_core::{CullBoundary, GameConfig, MovementIntent, PlayerTarget};
+use spaceship_core::{
+    CullBoundary, GameConfig, MovementIntent, PlayerTarget, Ship, SpatialHashConfig,
+};
 use std::time::Duration;
 
 #[allow(dead_code)]
@@ -954,6 +958,198 @@ fn spatial_hash_default_cell_size_is_positive() {
 #[allow(clippy::assertions_on_constants)]
 fn exposes_default_spatial_hash_cell_size_const() {
     assert!(spaceship_core::DEFAULT_SPATIAL_HASH_CELL_SIZE > 0.0);
+}
+
+#[allow(dead_code)]
+fn collision_test_app() -> App {
+    let mut app = App::new();
+    app.init_resource::<SpatialHashConfig>()
+        .init_resource::<CellQueryDebug>()
+        .add_systems(Update, spaceship_core::collision::detect_collisions);
+    app
+}
+
+#[allow(dead_code)]
+fn spawn_collision_enemy(world: &mut World, position: Vec2, health: f32) -> Entity {
+    world
+        .spawn((
+            Enemy,
+            Active,
+            Health {
+                current: health,
+                max: health,
+            },
+            Transform::from_translation(position.extend(0.0)),
+        ))
+        .id()
+}
+
+#[allow(dead_code)]
+fn spawn_collision_projectile(world: &mut World, position: Vec2, owner: ProjectileOwner) -> Entity {
+    world
+        .spawn((
+            Projectile {
+                damage: 5.0,
+                lifetime: finished_timer(),
+                owner,
+            },
+            Active,
+            Movement::linear(Vec2::ZERO),
+            Transform::from_translation(position.extend(0.0)),
+        ))
+        .id()
+}
+
+#[test]
+fn player_projectile_hits_enemy_attaches_flash_and_damage() {
+    let mut app = collision_test_app();
+    // Enemy at origin, player projectile overlapping it
+    let enemy = spawn_collision_enemy(app.world_mut(), Vec2::ZERO, 100.0);
+    let _proj = spawn_collision_projectile(
+        app.world_mut(),
+        Vec2::new(10.0, 0.0),
+        ProjectileOwner::Player,
+    );
+    // Distant enemy — should NOT be hit
+    let distant_enemy = spawn_collision_enemy(app.world_mut(), Vec2::new(2000.0, 0.0), 100.0);
+
+    app.update();
+
+    let world = app.world();
+    // Near enemy: damaged and flashed
+    assert!(
+        (world.get::<Health>(enemy).unwrap().current - 95.0).abs() < f32::EPSILON,
+        "enemy health should be reduced by projectile damage (100-5=95)"
+    );
+    assert!(
+        world.get::<HitFlash>(enemy).is_some(),
+        "hit enemy should have HitFlash component"
+    );
+    // Projectile consumed
+    assert!(
+        world.get::<Active>(_proj).is_none(),
+        "projectile should be deactivated after hit"
+    );
+    assert!(
+        world.get::<Inactive>(_proj).is_some(),
+        "projectile should be Inactive after hit"
+    );
+    // Distant enemy: untouched
+    assert!(
+        (world.get::<Health>(distant_enemy).unwrap().current - 100.0).abs() < f32::EPSILON,
+        "distant enemy should have full health"
+    );
+    assert!(
+        world.get::<HitFlash>(distant_enemy).is_none(),
+        "distant enemy should have no HitFlash"
+    );
+}
+
+#[test]
+fn enemy_projectile_hits_player_attaches_flash() {
+    let mut app = collision_test_app();
+    // Spawn player at origin
+    app.world_mut()
+        .spawn((Ship, PlayerTarget, Transform::from_translation(Vec3::ZERO)));
+    // Enemy projectile overlapping player
+    let _proj = spawn_collision_projectile(
+        app.world_mut(),
+        Vec2::new(10.0, 0.0),
+        ProjectileOwner::Enemy,
+    );
+
+    app.update();
+
+    // Find the player entity (the one with PlayerTarget)
+    let player_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<PlayerTarget>>()
+        .single(app.world())
+        .expect("player should exist");
+    let world = app.world();
+    assert!(
+        world.get::<HitFlash>(player_entity).is_some(),
+        "player should have HitFlash after hit"
+    );
+    assert!(
+        world.get::<Active>(_proj).is_none(),
+        "projectile should be deactivated"
+    );
+}
+
+#[test]
+fn player_projectile_ignores_player() {
+    let mut app = collision_test_app();
+    app.world_mut()
+        .spawn((Ship, PlayerTarget, Transform::from_translation(Vec3::ZERO)));
+    // Player-owned projectile overlapping player — should NOT hit
+    let _proj = spawn_collision_projectile(
+        app.world_mut(),
+        Vec2::new(10.0, 0.0),
+        ProjectileOwner::Player,
+    );
+
+    app.update();
+
+    let player_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<PlayerTarget>>()
+        .single(app.world())
+        .expect("player should exist");
+    let world = app.world();
+    assert!(
+        world.get::<HitFlash>(player_entity).is_none(),
+        "player should NOT have HitFlash from own projectile"
+    );
+    assert!(
+        world.get::<Active>(_proj).is_some(),
+        "player projectile should still be active"
+    );
+}
+
+#[test]
+fn enemy_projectile_ignores_enemy() {
+    let mut app = collision_test_app();
+    let enemy = spawn_collision_enemy(app.world_mut(), Vec2::ZERO, 100.0);
+    // Enemy-owned projectile overlapping enemy — should NOT hit
+    let _proj = spawn_collision_projectile(
+        app.world_mut(),
+        Vec2::new(10.0, 0.0),
+        ProjectileOwner::Enemy,
+    );
+
+    app.update();
+
+    let world = app.world();
+    assert!(
+        world.get::<HitFlash>(enemy).is_none(),
+        "enemy should NOT have HitFlash from own projectile"
+    );
+    assert!(
+        (world.get::<Health>(enemy).unwrap().current - 100.0).abs() < f32::EPSILON,
+        "enemy health should be unchanged"
+    );
+}
+
+#[test]
+fn cell_query_debug_records_queried_cells() {
+    let mut app = collision_test_app();
+    // Player at origin (cell 0,0)
+    app.world_mut()
+        .spawn((Ship, PlayerTarget, Transform::from_translation(Vec3::ZERO)));
+    // Enemy at a different cell
+    spawn_collision_enemy(app.world_mut(), Vec2::new(300.0, 300.0), 100.0);
+
+    app.update();
+
+    let debug = app.world().resource::<CellQueryDebug>();
+    // 3x3 neighborhood = 9 cells per entity, so at least 9 entries for player
+    // plus 9 for enemy. 3x3 = 9, some may overlap.
+    assert!(
+        debug.0.len() >= 9,
+        "should record at least 9 cells (player's 3x3), got {}",
+        debug.0.len()
+    );
 }
 
 fn main() {
