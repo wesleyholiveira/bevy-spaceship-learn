@@ -56,7 +56,18 @@ fn draw_grid_overlay(
     let cells = grid_dimensions(boundary.half_width, boundary.half_height, config.cell_size);
     let cell_size = config.cell_size.max(1.0);
 
-    // Highlight queried cells
+    // Main grid FIRST — gizmos have no depth test and identical sort keys,
+    // so later submissions overdraw earlier ones at the same pixels.
+    gizmos
+        .grid_2d(
+            Isometry2d::IDENTITY,
+            cells,
+            Vec2::splat(config.cell_size),
+            GREEN,
+        )
+        .outer_edges();
+
+    // Highlight queried cells AFTER the grid so yellow overdraws green at shared edges.
     for &cell in &cell_query.0 {
         let cell_origin = Vec2::new(cell.x as f32, cell.y as f32) * cell_size;
         let cell_center = cell_origin + Vec2::splat(cell_size / 2.0);
@@ -69,15 +80,6 @@ fn draw_grid_overlay(
             )
             .outer_edges();
     }
-
-    gizmos
-        .grid_2d(
-            Isometry2d::IDENTITY,
-            cells,
-            Vec2::splat(config.cell_size),
-            GREEN,
-        )
-        .outer_edges();
 }
 
 pub struct RenderPlugin;
